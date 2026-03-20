@@ -1,0 +1,433 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { Discipline, KanbanItem, CalendarItem, WorkbookItem, CalendarEvent, ProductionStats, KanbanStatus } from '@/lib/types'
+import {
+  getDisciplinesFromDB,
+  saveDisciplinesToDB,
+  saveDisciplineToDB,
+  deleteAllDisciplinesFromDB,
+  getKanbanItemsFromDB,
+  addKanbanItemToDB,
+  updateKanbanItemStatusInDB,
+  removeKanbanItemFromDB,
+  getCalendarItemsFromDB,
+  addCalendarItemToDB,
+  updateCalendarItemDateInDB,
+  removeCalendarItemFromDB,
+  getWorkbookItemsFromDB,
+  addWorkbookItemToDB,
+  updateWorkbookItemStatusInDB,
+  removeWorkbookItemFromDB,
+  getCalendarEventsFromDB,
+  addCalendarEventToDB,
+  updateCalendarEventInDB,
+  removeCalendarEventFromDB,
+  getProductionStatsFromDB,
+  markUnitAsCompletedInDB
+} from '@/lib/supabase-store'
+
+export function useDisciplines() {
+  const [disciplines, setDisciplines] = useState<Discipline[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchDisciplines = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getDisciplinesFromDB()
+      setDisciplines(data)
+      setError(null)
+    } catch (err) {
+      setError('Erro ao carregar disciplinas')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDisciplines()
+  }, [fetchDisciplines])
+
+  const saveDisciplines = useCallback(async (newDisciplines: Discipline[]) => {
+    try {
+      await saveDisciplinesToDB(newDisciplines)
+      setDisciplines(newDisciplines)
+    } catch (err) {
+      setError('Erro ao salvar disciplinas')
+      console.error(err)
+    }
+  }, [])
+
+  const saveDiscipline = useCallback(async (discipline: Discipline) => {
+    try {
+      await saveDisciplineToDB(discipline)
+      setDisciplines(prev => {
+        const index = prev.findIndex(d => d.id === discipline.id)
+        if (index >= 0) {
+          const updated = [...prev]
+          updated[index] = discipline
+          return updated
+        }
+        return [...prev, discipline]
+      })
+    } catch (err) {
+      setError('Erro ao salvar disciplina')
+      console.error(err)
+    }
+  }, [])
+
+  const clearAllDisciplines = useCallback(async () => {
+    try {
+      await deleteAllDisciplinesFromDB()
+      setDisciplines([])
+    } catch (err) {
+      setError('Erro ao limpar disciplinas')
+      console.error(err)
+    }
+  }, [])
+
+  return {
+    disciplines,
+    loading,
+    error,
+    fetchDisciplines,
+    saveDisciplines,
+    saveDiscipline,
+    clearAllDisciplines,
+    setDisciplines
+  }
+}
+
+export function useKanbanItems() {
+  const [kanbanItems, setKanbanItems] = useState<KanbanItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchKanbanItems = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getKanbanItemsFromDB()
+      setKanbanItems(data)
+      setError(null)
+    } catch (err) {
+      setError('Erro ao carregar itens do kanban')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchKanbanItems()
+  }, [fetchKanbanItems])
+
+  const addItem = useCallback(async (item: Omit<KanbanItem, 'id' | 'createdAt'>) => {
+    try {
+      const newItem = await addKanbanItemToDB(item)
+      if (newItem) {
+        setKanbanItems(prev => [...prev, newItem])
+        return newItem
+      }
+    } catch (err) {
+      setError('Erro ao adicionar item')
+      console.error(err)
+    }
+    return null
+  }, [])
+
+  const updateStatus = useCallback(async (id: string, status: KanbanStatus, markCompleted = true) => {
+    try {
+      await updateKanbanItemStatusInDB(id, status)
+      
+      // Se moveu para completed, marca a unidade como concluida
+      if (status === 'completed' && markCompleted) {
+        const item = kanbanItems.find(i => i.id === id)
+        if (item) {
+          await markUnitAsCompletedInDB(item.disciplineId, item.yearId, item.bimesterId, item.unitId, true)
+        }
+      }
+      
+      setKanbanItems(prev => prev.map(item => 
+        item.id === id ? { ...item, status } : item
+      ))
+    } catch (err) {
+      setError('Erro ao atualizar status')
+      console.error(err)
+    }
+  }, [kanbanItems])
+
+  const removeItem = useCallback(async (id: string) => {
+    try {
+      await removeKanbanItemFromDB(id)
+      setKanbanItems(prev => prev.filter(item => item.id !== id))
+    } catch (err) {
+      setError('Erro ao remover item')
+      console.error(err)
+    }
+  }, [])
+
+  return {
+    kanbanItems,
+    loading,
+    error,
+    fetchKanbanItems,
+    addItem,
+    updateStatus,
+    removeItem,
+    setKanbanItems
+  }
+}
+
+export function useCalendarItems() {
+  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchCalendarItems = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getCalendarItemsFromDB()
+      setCalendarItems(data)
+      setError(null)
+    } catch (err) {
+      setError('Erro ao carregar itens do calendario')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCalendarItems()
+  }, [fetchCalendarItems])
+
+  const addItem = useCallback(async (item: Omit<CalendarItem, 'id'>) => {
+    try {
+      const newItem = await addCalendarItemToDB(item)
+      if (newItem) {
+        setCalendarItems(prev => [...prev, newItem])
+        return newItem
+      }
+    } catch (err) {
+      setError('Erro ao adicionar item')
+      console.error(err)
+    }
+    return null
+  }, [])
+
+  const updateDate = useCallback(async (id: string, date: string) => {
+    try {
+      await updateCalendarItemDateInDB(id, date)
+      setCalendarItems(prev => prev.map(item => 
+        item.id === id ? { ...item, date } : item
+      ))
+    } catch (err) {
+      setError('Erro ao atualizar data')
+      console.error(err)
+    }
+  }, [])
+
+  const removeItem = useCallback(async (id: string) => {
+    try {
+      await removeCalendarItemFromDB(id)
+      setCalendarItems(prev => prev.filter(item => item.id !== id))
+    } catch (err) {
+      setError('Erro ao remover item')
+      console.error(err)
+    }
+  }, [])
+
+  return {
+    calendarItems,
+    loading,
+    error,
+    fetchCalendarItems,
+    addItem,
+    updateDate,
+    removeItem,
+    setCalendarItems
+  }
+}
+
+export function useWorkbookItems() {
+  const [workbookItems, setWorkbookItems] = useState<WorkbookItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchWorkbookItems = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getWorkbookItemsFromDB()
+      setWorkbookItems(data)
+      setError(null)
+    } catch (err) {
+      setError('Erro ao carregar itens do caderno de atividades')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchWorkbookItems()
+  }, [fetchWorkbookItems])
+
+  const addItem = useCallback(async (item: Omit<WorkbookItem, 'id' | 'createdAt'>) => {
+    try {
+      const newItem = await addWorkbookItemToDB(item)
+      if (newItem) {
+        setWorkbookItems(prev => [...prev, newItem])
+        return newItem
+      }
+    } catch (err) {
+      setError('Erro ao adicionar item')
+      console.error(err)
+    }
+    return null
+  }, [])
+
+  const updateStatus = useCallback(async (id: string, status: KanbanStatus, markCompleted = true) => {
+    try {
+      await updateWorkbookItemStatusInDB(id, status)
+      
+      // Se moveu para completed, marca a unidade como concluida
+      if (status === 'completed' && markCompleted) {
+        const item = workbookItems.find(i => i.id === id)
+        if (item) {
+          await markUnitAsCompletedInDB(item.disciplineId, item.yearId, item.bimesterId, item.unitId, true)
+        }
+      }
+      
+      setWorkbookItems(prev => prev.map(item => 
+        item.id === id ? { ...item, status } : item
+      ))
+    } catch (err) {
+      setError('Erro ao atualizar status')
+      console.error(err)
+    }
+  }, [workbookItems])
+
+  const removeItem = useCallback(async (id: string) => {
+    try {
+      await removeWorkbookItemFromDB(id)
+      setWorkbookItems(prev => prev.filter(item => item.id !== id))
+    } catch (err) {
+      setError('Erro ao remover item')
+      console.error(err)
+    }
+  }, [])
+
+  return {
+    workbookItems,
+    loading,
+    error,
+    fetchWorkbookItems,
+    addItem,
+    updateStatus,
+    removeItem,
+    setWorkbookItems
+  }
+}
+
+export function useCalendarEvents() {
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchEvents = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getCalendarEventsFromDB()
+      setEvents(data)
+      setError(null)
+    } catch (err) {
+      setError('Erro ao carregar eventos')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchEvents()
+  }, [fetchEvents])
+
+  const addEvent = useCallback(async (event: Omit<CalendarEvent, 'id' | 'createdAt'>) => {
+    try {
+      const newEvent = await addCalendarEventToDB(event)
+      if (newEvent) {
+        setEvents(prev => [...prev, newEvent])
+        return newEvent
+      }
+    } catch (err) {
+      setError('Erro ao adicionar evento')
+      console.error(err)
+    }
+    return null
+  }, [])
+
+  const updateEvent = useCallback(async (id: string, event: Partial<Omit<CalendarEvent, 'id' | 'createdAt'>>) => {
+    try {
+      await updateCalendarEventInDB(id, event)
+      setEvents(prev => prev.map(e => 
+        e.id === id ? { ...e, ...event } : e
+      ))
+    } catch (err) {
+      setError('Erro ao atualizar evento')
+      console.error(err)
+    }
+  }, [])
+
+  const removeEvent = useCallback(async (id: string) => {
+    try {
+      await removeCalendarEventFromDB(id)
+      setEvents(prev => prev.filter(e => e.id !== id))
+    } catch (err) {
+      setError('Erro ao remover evento')
+      console.error(err)
+    }
+  }, [])
+
+  return {
+    events,
+    loading,
+    error,
+    fetchEvents,
+    addEvent,
+    updateEvent,
+    removeEvent,
+    setEvents
+  }
+}
+
+export function useProductionStats() {
+  const [stats, setStats] = useState<ProductionStats>({
+    totalChapters: 0,
+    completedChapters: 0,
+    inProduction: 0,
+    inLayout: 0,
+    inPrinting: 0,
+    inCompleted: 0
+  })
+  const [loading, setLoading] = useState(true)
+
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await getProductionStatsFromDB()
+      setStats(data)
+    } catch (err) {
+      console.error('Erro ao carregar estatisticas:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
+
+  return { stats, loading, fetchStats }
+}
