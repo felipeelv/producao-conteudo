@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useDisciplines, useCalendarItems, useKanbanItems, useWorkbookItems, useCalendarEvents } from '@/hooks/use-production-data'
@@ -582,7 +583,210 @@ type ViewMode = 'week' | 'month'
 
 type ItemTypeFilter = 'all' | 'content' | 'workbook'
 
+// ─── Layout Mobile ──────────────────────────────────────────────────────────
+interface MobileCalendarioProps {
+  weekDates: Date[]
+  filteredCalendarItems: CalendarItem[]
+  events: CalendarEvent[]
+  kanbanItems: KanbanItem[]
+  workbookItems: WorkbookItem[]
+  disciplines: Discipline[]
+  itemTypeFilter: ItemTypeFilter
+  setItemTypeFilter: (f: ItemTypeFilter) => void
+  handlePrev: () => void
+  handleNext: () => void
+  handleToday: () => void
+}
+
+function MobileCalendarioView({
+  weekDates,
+  filteredCalendarItems,
+  events,
+  kanbanItems,
+  workbookItems,
+  disciplines,
+  itemTypeFilter,
+  setItemTypeFilter,
+  handlePrev,
+  handleNext,
+  handleToday,
+}: MobileCalendarioProps) {
+  const todayStr = formatDate(new Date())
+
+  return (
+    <div className="flex flex-col min-h-screen bg-background">
+      {/* Cabeçalho fixo */}
+      <div className="sticky top-0 z-10 bg-card border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrev}
+              className="p-1.5 rounded-md border border-border hover:bg-muted"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleNext}
+              className="p-1.5 rounded-md border border-border hover:bg-muted"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleToday}
+              className="px-3 py-1.5 text-xs rounded-md border border-border hover:bg-muted font-medium"
+            >
+              Hoje
+            </button>
+          </div>
+          <span className="text-sm font-semibold text-foreground">
+            {weekDates[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            {' – '}
+            {weekDates[4].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </span>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex border-t border-border">
+          {([['all', 'Todos'], ['content', 'Conteúdo'], ['workbook', 'Caderno']] as const).map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setItemTypeFilter(val)}
+              className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                itemTypeFilter === val
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Lista de dias */}
+      <div className="flex-1 p-3 space-y-3">
+        {weekDates.map((date, index) => {
+          const dateStr = formatDate(date)
+          const dayItems = filteredCalendarItems.filter(item => item.date === dateStr)
+          const { periodEvents, pointEvents } = getEventsForDate(dateStr, events)
+          const bimesterEvent = periodEvents.find(e => e.eventType === 'bimester')
+          const isToday = dateStr === todayStr
+          const hasContent = dayItems.length > 0 || pointEvents.length > 0
+
+          return (
+            <div
+              key={dateStr}
+              className={`rounded-xl border overflow-hidden ${
+                isToday ? 'border-primary' : 'border-border'
+              }`}
+            >
+              {/* Header do dia */}
+              <div
+                className={`flex items-center justify-between px-4 py-2.5 ${
+                  isToday ? 'bg-primary/10' : bimesterEvent ? '' : 'bg-muted/30'
+                }`}
+                style={bimesterEvent ? { backgroundColor: bimesterEvent.color + '20' } : undefined}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>
+                    {WEEKDAYS[index]}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                  </span>
+                  {bimesterEvent && (
+                    <span
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                      style={{ backgroundColor: bimesterEvent.color + '30', color: bimesterEvent.color }}
+                    >
+                      {bimesterEvent.title}
+                    </span>
+                  )}
+                </div>
+                {hasContent && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {dayItems.length + pointEvents.length} item(s)
+                  </span>
+                )}
+              </div>
+
+              {/* Conteúdo do dia */}
+              {!hasContent ? (
+                <p className="text-xs text-muted-foreground px-4 py-3">Nenhum item agendado</p>
+              ) : (
+                <div className="p-3 space-y-2 bg-card">
+                  {/* Eventos pontuais */}
+                  {pointEvents.map(event => (
+                    <div
+                      key={event.id}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+                      style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+                    >
+                      <Flag className="h-3 w-3 flex-shrink-0" style={{ color: event.color }} />
+                      <span className="font-medium" style={{ color: event.color }}>{event.title}</span>
+                    </div>
+                  ))}
+
+                  {/* Itens do calendário */}
+                  {dayItems.map(item => {
+                    const color = getDisciplineColor(disciplines, item.disciplineId)
+                    const isWorkbook = item.itemType === 'workbook'
+                    const status = getItemStatus(item, kanbanItems, workbookItems)
+                    const statusIndicator = status ? getStatusIndicator(status) : null
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs"
+                        style={{
+                          backgroundColor: isWorkbook ? '#f59e0b10' : '#3b82f610',
+                          borderLeft: `4px solid ${color}`,
+                        }}
+                      >
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+                          style={{
+                            backgroundColor: isWorkbook ? '#f59e0b30' : '#3b82f630',
+                            color: isWorkbook ? '#d97706' : '#2563eb',
+                          }}
+                        >
+                          {isWorkbook ? 'CA' : 'C'}
+                        </span>
+                        <span
+                          className="font-bold px-1.5 py-0.5 rounded text-[10px] flex-shrink-0"
+                          style={{ backgroundColor: color + '25', color }}
+                        >
+                          {item.yearName}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">
+                            {getSequentialUnitName(item.bimesterName, item.unitName)}
+                          </p>
+                          <p className="text-muted-foreground truncate text-[10px]">{item.disciplineName}</p>
+                        </div>
+                        {statusIndicator && (
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0"
+                            style={{ backgroundColor: statusIndicator.bgColor, color: statusIndicator.color }}
+                          >
+                            {statusIndicator.shortLabel}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function CalendarioPage() {
+  const isMobile = useIsMobile()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('week')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemTypeFilter>('all')
@@ -743,6 +947,24 @@ export default function CalendarioPage() {
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <MobileCalendarioView
+        weekDates={weekDates}
+        filteredCalendarItems={filteredCalendarItems}
+        events={events}
+        kanbanItems={kanbanItems}
+        workbookItems={workbookItems}
+        disciplines={disciplines}
+        itemTypeFilter={itemTypeFilter}
+        setItemTypeFilter={setItemTypeFilter}
+        handlePrev={handlePrev}
+        handleNext={handleNext}
+        handleToday={handleToday}
+      />
     )
   }
 

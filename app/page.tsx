@@ -1,6 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useDisciplines, useKanbanItems, useWorkbookItems, useCalendarItems, useProductionStats } from '@/hooks/use-production-data'
 import { KanbanItem, WorkbookItem, CalendarItem, Discipline } from '@/lib/types'
 import { getSequentialUnitName, getStatusIndicator, KanbanStatusType } from '@/lib/utils'
@@ -319,6 +322,15 @@ function DisciplinesList({ disciplines }: { disciplines: Discipline[] }) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const isMobile = useIsMobile()
+
+  useEffect(() => {
+    if (isMobile) {
+      router.replace('/calendario')
+    }
+  }, [isMobile, router])
+
   const { stats, loading: statsLoading } = useProductionStats()
   const { disciplines, loading: disciplinesLoading } = useDisciplines()
   const { kanbanItems, loading: kanbanLoading } = useKanbanItems()
@@ -335,6 +347,8 @@ export default function DashboardPage() {
     inPrinting: workbookItems.filter(i => i.status === 'printing').length,
     inCompleted: workbookItems.filter(i => i.status === 'completed').length
   }
+
+  if (isMobile) return null
 
   if (loading) {
     return (

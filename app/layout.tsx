@@ -25,10 +25,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="font-sans antialiased">
-        <div className="print-hide"><AppSidebar /></div>
-        <div className="ml-64 min-h-screen print-main-wrapper">
-          <div className="print-hide"><AppHeader /></div>
-          <main className="p-6">
+        <div className="hidden md:block print-hide"><AppSidebar /></div>
+        <div className="md:ml-64 min-h-screen print-main-wrapper">
+          <div className="hidden md:block print-hide"><AppHeader /></div>
+          <main className="p-0 md:p-6">
             {children}
           </main>
         </div>
