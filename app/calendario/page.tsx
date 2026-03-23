@@ -8,7 +8,7 @@ import { Discipline, CalendarItem, CalendarChapter, CalendarItemType, CalendarEv
 import { getSequentialUnitName, getStatusIndicator, KanbanStatusType } from '@/lib/utils'
 import { EventModal } from '@/components/event-modal'
 import { DayDetailModal } from '@/components/day-detail-modal'
-import { ChevronLeft, ChevronRight, GripVertical, X, ChevronDown, BookOpen, Loader2, Calendar, CalendarDays, FileText, Filter, Plus, Flag, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, GripVertical, X, ChevronDown, BookOpen, Loader2, Calendar, CalendarDays, FileText, Filter, Plus, Flag, AlertCircle, Printer } from 'lucide-react'
 
 const WEEKDAYS = ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta']
 const WEEKDAYS_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
@@ -747,8 +747,8 @@ export default function CalendarioPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-8rem)]">
-      <div className="w-full lg:w-72 xl:w-80 flex-shrink-0 space-y-4 overflow-y-auto max-h-[200px] lg:max-h-none">
+    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 h-[calc(100vh-8rem)] print-calendar-root">
+      <div className="w-full lg:w-72 xl:w-80 flex-shrink-0 space-y-4 overflow-y-auto max-h-[200px] lg:max-h-none print-hide">
         <Card className="border-border bg-card">
           <CardHeader className="pb-3 p-3 lg:p-6 lg:pb-3">
             <CardTitle className="text-sm font-medium text-card-foreground flex items-center gap-2">
@@ -870,7 +870,7 @@ export default function CalendarioPage() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2 print-hide">
           <div className="flex items-center gap-1 sm:gap-2">
             <Button variant="outline" size="icon" onClick={handlePrev} className="h-8 w-8 sm:h-9 sm:w-9">
               <ChevronLeft className="h-4 w-4" />
@@ -967,9 +967,9 @@ export default function CalendarioPage() {
             </div>
             
             {/* Botao novo evento */}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => openNewEventModal()}
               className="text-xs"
             >
@@ -977,6 +977,20 @@ export default function CalendarioPage() {
               <span className="hidden sm:inline">Novo Evento</span>
               <span className="sm:hidden">Evento</span>
             </Button>
+
+            {/* Botao imprimir - apenas na visao semanal */}
+            {viewMode === 'week' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+                className="text-xs"
+                title="Imprimir calendário semanal (A4 paisagem)"
+              >
+                <Printer className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Imprimir</span>
+              </Button>
+            )}
           </div>
           <h2 className="text-sm sm:text-lg font-semibold text-foreground">
             {viewMode === 'week' 
@@ -986,10 +1000,17 @@ export default function CalendarioPage() {
           </h2>
         </div>
 
-        <Card className="flex-1 border-border bg-card overflow-hidden">
+        <Card className="flex-1 border-border bg-card overflow-hidden print-calendar-card">
           {viewMode === 'week' ? (
             <>
-              <div className="flex border-b border-border overflow-x-auto">
+              {/* Titulo visivel apenas na impressao */}
+              <div className="print-show px-4 pt-3 pb-1">
+                <h1 className="text-base font-bold text-foreground">
+                  Calendário Semanal — {weekDates[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} a {weekDates[4].toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </h1>
+              </div>
+
+              <div className="flex border-b border-border overflow-x-auto print-week-header">
                 {WEEKDAYS.map((day, index) => (
                   <div
                     key={day}
@@ -997,8 +1018,8 @@ export default function CalendarioPage() {
                   >
                     <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">{day}</p>
                     <p className={`text-sm sm:text-lg font-semibold ${
-                      formatDate(weekDates[index]) === formatDate(new Date()) 
-                        ? 'text-primary' 
+                      formatDate(weekDates[index]) === formatDate(new Date())
+                        ? 'text-primary'
                         : 'text-foreground'
                     }`}>
                       {formatDisplayDate(weekDates[index])}
@@ -1006,24 +1027,25 @@ export default function CalendarioPage() {
                   </div>
                 ))}
               </div>
-              
-              <div className="flex h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] overflow-x-auto overflow-y-auto">
+
+              <div className="flex h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] overflow-x-auto overflow-y-auto print-week-body">
                 {weekDates.map((date) => (
-                  <CalendarDay
-                    key={formatDate(date)}
-                    date={date}
-                    items={filteredCalendarItems}
-                    events={events}
-                    kanbanItems={kanbanItems}
-                    workbookItems={workbookItems}
-                    onDrop={handleDrop}
-                    onRemove={handleRemove}
-                    onEventClick={handleEventClick}
-                    onDayClick={handleDayClick}
-                    draggedItem={draggedItem}
-                    setDraggedItem={setDraggedItem}
-                    disciplines={disciplines}
-                  />
+                  <div key={formatDate(date)} className="flex-1 print-week-day">
+                    <CalendarDay
+                      date={date}
+                      items={filteredCalendarItems}
+                      events={events}
+                      kanbanItems={kanbanItems}
+                      workbookItems={workbookItems}
+                      onDrop={handleDrop}
+                      onRemove={handleRemove}
+                      onEventClick={handleEventClick}
+                      onDayClick={handleDayClick}
+                      draggedItem={draggedItem}
+                      setDraggedItem={setDraggedItem}
+                      disciplines={disciplines}
+                    />
+                  </div>
                 ))}
               </div>
             </>

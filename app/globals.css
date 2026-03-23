@@ -135,3 +135,74 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Visivel apenas na impressao */
+.print-show {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  .print-hide {
+    display: none !important;
+  }
+
+  .print-show {
+    display: block !important;
+  }
+
+  /* Exibir o titulo de impressao */
+  .print-calendar-card .print-show {
+    display: block !important;
+  }
+
+  .print-main-wrapper {
+    margin-left: 0 !important;
+    min-height: auto !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  /* Calendário semanal */
+  .print-calendar-root {
+    height: auto !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  .print-calendar-card {
+    flex: none !important;
+    overflow: visible !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+  }
+
+  .print-week-header {
+    overflow: visible !important;
+  }
+
+  .print-week-body {
+    height: auto !important;
+    overflow: visible !important;
+    min-height: 140mm !important;
+  }
+
+  .print-week-day {
+    overflow: visible !important;
+    min-height: 140mm !important;
+    page-break-inside: avoid;
+  }
+
+  /* Garantir cores de fundo e bordas coloridas na impressão */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
