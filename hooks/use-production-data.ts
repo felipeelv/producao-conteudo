@@ -139,18 +139,34 @@ export function useKanbanItems() {
 
   const updateStatus = useCallback(async (id: string, status: KanbanStatus, markCompleted = true) => {
     try {
+      const item = kanbanItems.find(i => i.id === id)
       await updateKanbanItemStatusInDB(id, status)
-      
+
       // Se moveu para completed, marca a unidade como concluida
       if (status === 'completed' && markCompleted) {
-        const item = kanbanItems.find(i => i.id === id)
         if (item) {
           await markUnitAsCompletedInDB(item.disciplineId, item.yearId, item.bimesterId, item.unitId, true)
         }
       }
-      
-      setKanbanItems(prev => prev.map(item => 
-        item.id === id ? { ...item, status } : item
+
+      if (item) {
+        fetch('/api/slack/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            unitName: item.unitName,
+            disciplineName: item.disciplineName,
+            yearName: item.yearName,
+            bimesterName: item.bimesterName,
+            previousStatus: item.status,
+            newStatus: status,
+            boardType: 'content',
+          }),
+        }).catch(err => console.error('Slack notify failed:', err))
+      }
+
+      setKanbanItems(prev => prev.map(i =>
+        i.id === id ? { ...i, status } : i
       ))
     } catch (err) {
       setError('Erro ao atualizar status')
@@ -290,18 +306,34 @@ export function useWorkbookItems() {
 
   const updateStatus = useCallback(async (id: string, status: KanbanStatus, markCompleted = true) => {
     try {
+      const item = workbookItems.find(i => i.id === id)
       await updateWorkbookItemStatusInDB(id, status)
-      
+
       // Se moveu para completed, marca a unidade como concluida
       if (status === 'completed' && markCompleted) {
-        const item = workbookItems.find(i => i.id === id)
         if (item) {
           await markUnitAsCompletedInDB(item.disciplineId, item.yearId, item.bimesterId, item.unitId, true)
         }
       }
-      
-      setWorkbookItems(prev => prev.map(item => 
-        item.id === id ? { ...item, status } : item
+
+      if (item) {
+        fetch('/api/slack/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            unitName: item.unitName,
+            disciplineName: item.disciplineName,
+            yearName: item.yearName,
+            bimesterName: item.bimesterName,
+            previousStatus: item.status,
+            newStatus: status,
+            boardType: 'workbook',
+          }),
+        }).catch(err => console.error('Slack notify failed:', err))
+      }
+
+      setWorkbookItems(prev => prev.map(i =>
+        i.id === id ? { ...i, status } : i
       ))
     } catch (err) {
       setError('Erro ao atualizar status')
