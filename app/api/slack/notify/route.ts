@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SlackNotifyPayload, formatSlackMessage } from '@/lib/slack'
+import { SlackNotifyPayload, formatSlackMessage, getWebhookUrl } from '@/lib/slack'
 
 export async function POST(request: NextRequest) {
-  const webhookUrl = process.env.SLACK_WEBHOOK_URL
-  if (!webhookUrl) {
-    return NextResponse.json({ ok: true })
-  }
-
   let body: SlackNotifyPayload
   try {
     body = await request.json()
@@ -16,12 +11,17 @@ export async function POST(request: NextRequest) {
 
   const { unitName, disciplineName, yearName, bimesterName, previousStatus, newStatus, boardType } = body
 
-  if (!unitName || !disciplineName || !yearName || !bimesterName || !previousStatus || !newStatus) {
+  if (!unitName || !disciplineName || !yearName || !bimesterName || !previousStatus || !newStatus || !boardType) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
   if (boardType !== 'content' && boardType !== 'workbook') {
     return NextResponse.json({ error: 'Invalid boardType' }, { status: 400 })
+  }
+
+  const webhookUrl = getWebhookUrl(boardType, newStatus)
+  if (!webhookUrl) {
+    return NextResponse.json({ ok: true })
   }
 
   try {

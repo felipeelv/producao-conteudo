@@ -36,6 +36,21 @@ const BOARD_LABELS: Record<'content' | 'workbook', string> = {
   workbook: 'Caderno de Atividades',
 }
 
+const CONTENT_WEBHOOK_MAP: Record<KanbanStatus, string> = {
+  production: 'SLACK_WEBHOOK_PRODUCAO',
+  layout: 'SLACK_WEBHOOK_DIAGRAMACAO',
+  printing: 'SLACK_WEBHOOK_IMPRESSAO',
+  completed: 'SLACK_WEBHOOK_CONCLUIDO',
+}
+
+export function getWebhookUrl(boardType: 'content' | 'workbook', newStatus: KanbanStatus): string | null {
+  if (boardType === 'workbook') {
+    return process.env.SLACK_WEBHOOK_CADERNO ?? null
+  }
+  const envVar = CONTENT_WEBHOOK_MAP[newStatus]
+  return process.env[envVar] ?? null
+}
+
 export function formatSlackMessage(payload: SlackNotifyPayload) {
   const { unitName, disciplineName, yearName, bimesterName, previousStatus, newStatus, boardType } = payload
 
