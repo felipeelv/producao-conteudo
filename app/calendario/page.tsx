@@ -612,6 +612,16 @@ function MobileCalendarioView({
   handleToday,
 }: MobileCalendarioProps) {
   const todayStr = formatDate(new Date())
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+  const toggleItem = (id: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -733,44 +743,69 @@ function MobileCalendarioView({
                     const isWorkbook = item.itemType === 'workbook'
                     const status = getItemStatus(item, kanbanItems, workbookItems)
                     const statusIndicator = status ? getStatusIndicator(status) : null
+                    const isExpanded = expandedItems.has(item.id)
 
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs"
+                        className="rounded-lg overflow-hidden text-xs"
                         style={{
                           backgroundColor: isWorkbook ? '#f59e0b10' : '#3b82f610',
                           borderLeft: `4px solid ${color}`,
                         }}
                       >
-                        <span
-                          className="text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
-                          style={{
-                            backgroundColor: isWorkbook ? '#f59e0b30' : '#3b82f630',
-                            color: isWorkbook ? '#d97706' : '#2563eb',
-                          }}
+                        {/* Linha principal — clicável */}
+                        <button
+                          onClick={() => toggleItem(item.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-left"
                         >
-                          {isWorkbook ? 'CA' : 'C'}
-                        </span>
-                        <span
-                          className="font-bold px-1.5 py-0.5 rounded text-[10px] flex-shrink-0"
-                          style={{ backgroundColor: color + '25', color }}
-                        >
-                          {item.yearName}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">
-                            {getSequentialUnitName(item.bimesterName, item.unitName)}
-                          </p>
-                          <p className="text-muted-foreground truncate text-[10px]">{item.disciplineName}</p>
-                        </div>
-                        {statusIndicator && (
                           <span
-                            className="text-[10px] font-medium px-1.5 py-0.5 rounded flex-shrink-0"
-                            style={{ backgroundColor: statusIndicator.bgColor, color: statusIndicator.color }}
+                            className="text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+                            style={{
+                              backgroundColor: isWorkbook ? '#f59e0b30' : '#3b82f630',
+                              color: isWorkbook ? '#d97706' : '#2563eb',
+                            }}
                           >
-                            {statusIndicator.shortLabel}
+                            {isWorkbook ? 'CA' : 'C'}
                           </span>
+                          <span
+                            className="font-bold px-1.5 py-0.5 rounded text-[10px] flex-shrink-0"
+                            style={{ backgroundColor: color + '25', color }}
+                          >
+                            {item.yearName}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">
+                              {getSequentialUnitName(item.bimesterName, item.unitName)}
+                            </p>
+                            <p className="text-muted-foreground truncate text-[10px]">{item.disciplineName}</p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {statusIndicator && (
+                              <span
+                                className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                style={{ backgroundColor: statusIndicator.bgColor, color: statusIndicator.color }}
+                              >
+                                {statusIndicator.shortLabel}
+                              </span>
+                            )}
+                            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+                          </div>
+                        </button>
+
+                        {/* Capítulos expandidos */}
+                        {isExpanded && item.chapters.length > 0 && (
+                          <div className="px-3 pb-3 pt-1 border-t border-border/30 space-y-1.5">
+                            <p className="text-[10px] text-muted-foreground uppercase font-medium tracking-wide">
+                              Capítulos ({item.chapters.length})
+                            </p>
+                            {item.chapters.map(chapter => (
+                              <div key={chapter.id} className="flex items-center gap-2 text-[11px] text-foreground/80">
+                                <BookOpen className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                <span>{chapter.name}</span>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     )
