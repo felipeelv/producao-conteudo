@@ -12,15 +12,22 @@ export interface SlackNotifyPayload {
 
 const STATUS_LABELS: Record<KanbanStatus, string> = {
   production: 'Produção',
-  layout: 'Layout',
+  layout: 'Diagramação',
   printing: 'Impressão',
   completed: 'Concluído',
 }
 
+const STATUS_EMOJIS: Record<KanbanStatus, string> = {
+  production: '🔄',
+  layout: '📓✏️',
+  printing: '🖨️',
+  completed: '✅',
+}
+
 const STATUS_COLORS: Record<KanbanStatus, string> = {
-  production: '#f59e0b',
-  layout: '#3b82f6',
-  printing: '#8b5cf6',
+  production: '#ef4444',
+  layout: '#f59e0b',
+  printing: '#3b82f6',
   completed: '#10b981',
 }
 
@@ -41,7 +48,7 @@ export function formatSlackMessage(payload: SlackNotifyPayload) {
             type: 'header',
             text: {
               type: 'plain_text',
-              text: `Kanban — ${BOARD_LABELS[boardType]}`,
+              text: `${STATUS_EMOJIS[newStatus]} Kanban — ${BOARD_LABELS[boardType]}`,
             },
           },
           {
