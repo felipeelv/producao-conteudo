@@ -184,20 +184,113 @@
     box-shadow: none !important;
   }
 
-  .print-week-header {
-    overflow: visible !important;
+  /* Lista de impressão */
+  .print-list {
+    padding: 4mm 6mm;
+    display: flex !important;
+    flex-direction: column;
+    gap: 5mm;
   }
 
-  .print-week-body {
-    height: auto !important;
-    overflow: visible !important;
-    min-height: 140mm !important;
-  }
-
-  .print-week-day {
-    overflow: visible !important;
-    min-height: 140mm !important;
+  .print-list-day {
     page-break-inside: avoid;
+  }
+
+  .print-list-day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    border-bottom: 1.5px solid #374151;
+    padding-bottom: 2px;
+    margin-bottom: 3px;
+  }
+
+  .print-list-day-name {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #111827;
+    text-transform: capitalize;
+  }
+
+  .print-list-day-date {
+    font-size: 9pt;
+    color: #6b7280;
+  }
+
+  .print-list-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 4mm;
+  }
+
+  .print-list-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9pt;
+    color: #1f2937;
+    padding: 2px 4px;
+    border-left: 3px solid #9ca3af;
+  }
+
+  .print-list-event {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9pt;
+    color: #1f2937;
+    padding: 2px 4px;
+    border-left: 3px solid #f59e0b;
+  }
+
+  .print-list-empty {
+    font-size: 8pt;
+    color: #9ca3af;
+    padding-left: 4mm;
+    font-style: italic;
+  }
+
+  .print-list-badge {
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .print-list-badge-c {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .print-list-badge-ca {
+    background-color: #fef3c7;
+    color: #b45309;
+  }
+
+  .print-list-badge-event {
+    background-color: #fef3c7;
+    color: #b45309;
+  }
+
+  .print-list-year {
+    font-weight: 600;
+    font-size: 9pt;
+  }
+
+  .print-list-unit {
+    font-size: 9pt;
+  }
+
+  .print-list-discipline {
+    font-size: 9pt;
+    color: #4b5563;
+  }
+
+  .print-list-sep {
+    color: #d1d5db;
+    font-size: 8pt;
   }
 
   /* Garantir cores de fundo e bordas coloridas na impressão */

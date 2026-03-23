@@ -1010,7 +1010,7 @@ export default function CalendarioPage() {
                 </h1>
               </div>
 
-              <div className="flex border-b border-border overflow-x-auto print-week-header">
+              <div className="flex border-b border-border overflow-x-auto print-hide">
                 {WEEKDAYS.map((day, index) => (
                   <div
                     key={day}
@@ -1028,9 +1028,9 @@ export default function CalendarioPage() {
                 ))}
               </div>
 
-              <div className="flex h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] overflow-x-auto overflow-y-auto print-week-body">
+              <div className="flex h-[calc(100%-3.5rem)] sm:h-[calc(100%-4rem)] overflow-x-auto overflow-y-auto print-hide">
                 {weekDates.map((date) => (
-                  <div key={formatDate(date)} className="flex-1 print-week-day">
+                  <div key={formatDate(date)} className="flex-1">
                     <CalendarDay
                       date={date}
                       items={filteredCalendarItems}
@@ -1047,6 +1047,52 @@ export default function CalendarioPage() {
                     />
                   </div>
                 ))}
+              </div>
+
+              {/* Lista para impressao - visivel apenas no print */}
+              <div className="print-show print-list">
+                {weekDates.map((date, index) => {
+                  const dateStr = formatDate(date)
+                  const dayItems = filteredCalendarItems.filter(item => item.date === dateStr)
+                  const { pointEvents } = getEventsForDate(dateStr, events)
+                  const hasContent = dayItems.length > 0 || pointEvents.length > 0
+                  return (
+                    <div key={dateStr} className="print-list-day">
+                      <div className="print-list-day-header">
+                        <span className="print-list-day-name">{WEEKDAYS[index]}</span>
+                        <span className="print-list-day-date">{date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                      </div>
+                      {!hasContent ? (
+                        <p className="print-list-empty">Nenhum item agendado</p>
+                      ) : (
+                        <div className="print-list-items">
+                          {pointEvents.map(event => (
+                            <div key={event.id} className="print-list-event">
+                              <span className="print-list-badge print-list-badge-event">Evento</span>
+                              <span>{event.title}</span>
+                            </div>
+                          ))}
+                          {dayItems.map(item => {
+                            const color = getDisciplineColor(disciplines, item.disciplineId)
+                            const isWorkbook = item.itemType === 'workbook'
+                            return (
+                              <div key={item.id} className="print-list-item" style={{ borderLeftColor: color }}>
+                                <span className={`print-list-badge ${isWorkbook ? 'print-list-badge-ca' : 'print-list-badge-c'}`}>
+                                  {isWorkbook ? 'CA' : 'C'}
+                                </span>
+                                <span className="print-list-year">{item.yearName}</span>
+                                <span className="print-list-sep">—</span>
+                                <span className="print-list-unit">{getSequentialUnitName(item.bimesterName, item.unitName)}</span>
+                                <span className="print-list-sep">—</span>
+                                <span className="print-list-discipline">{item.disciplineName}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </>
           ) : (
