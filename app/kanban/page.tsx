@@ -98,17 +98,17 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, isMob
                 draggable={!isMobile}
                 onDragStart={() => !isMobile && setDraggedItem({ id: item.id, status: item.status })}
                 onDragEnd={() => !isMobile && setDraggedItem(null)}
-                className={`border-border bg-card transition-colors group ${
+                className={`py-0 overflow-hidden border-border bg-card transition-colors group ${
                   isMobile ? '' : 'cursor-grab active:cursor-grabbing hover:bg-muted/30'
                 } ${column.id === 'completed' ? 'opacity-80' : ''}`}
               >
                 <CardContent className="p-3">
                   {/* Badge da disciplina em destaque */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20 truncate max-w-[80%]">
-                      <BookOpen className="h-3 w-3 flex-shrink-0" />
-                      {item.disciplineName}
-                    </span>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 border border-primary/20 min-w-0">
+                      <BookOpen className="h-3 w-3 flex-shrink-0 text-primary" />
+                      <span className="text-xs font-semibold text-primary truncate">{item.disciplineName}</span>
+                    </div>
                     <button
                       onClick={() => onRemove(item.id)}
                       className={`text-muted-foreground hover:text-destructive flex-shrink-0 transition-opacity ${
