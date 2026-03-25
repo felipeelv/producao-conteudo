@@ -258,7 +258,8 @@ function AddUnitsModal({ discipline, existingItems, scheduledUnitIds, onAdd, onC
               unitId: unit.id,
               unitName: unit.name,
               chapters: unit.chapters.map(c => ({ id: c.id, name: c.name })),
-              status: 'production'
+              status: 'production',
+              printApproved: false
             })
           }
         })
