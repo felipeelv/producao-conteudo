@@ -147,8 +147,8 @@ function DeadlineAlerts({
         status = workbookItem?.status as KanbanStatusType || null
       }
       
-      // Ignorar itens já concluídos
-      if (status === 'completed') return null
+      // Ignorar itens já concluídos ou em impressão (diagramação já garantida)
+      if (status === 'completed' || status === 'printing') return null
       
       return {
         id: item.id,
@@ -265,6 +265,88 @@ function DeadlineAlerts({
                 +{alerts.length - 10} mais alertas
               </p>
             )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function PrintingQueue({
+  kanbanItems,
+  workbookItems
+}: {
+  kanbanItems: KanbanItem[]
+  workbookItems: WorkbookItem[]
+}) {
+  const contentPrinting = kanbanItems.filter(i => i.status === 'printing')
+  const workbookPrinting = workbookItems.filter(i => i.status === 'printing')
+  const total = contentPrinting.length + workbookPrinting.length
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground">
+          <Printer className="h-5 w-5 text-purple-500" />
+          Fila de Impressão
+          {total > 0 && (
+            <span className="ml-auto text-sm font-normal text-muted-foreground">
+              {total} unidade{total !== 1 ? 's' : ''}
+            </span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {total === 0 ? (
+          <div className="text-center py-6">
+            <CheckCircle2 className="h-12 w-12 mx-auto text-primary/50 mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma unidade aguardando impressão</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Conteúdo */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-600">C</span>
+                <span className="text-xs font-medium text-muted-foreground">Conteúdo ({contentPrinting.length})</span>
+              </div>
+              {contentPrinting.length === 0 ? (
+                <p className="text-xs text-muted-foreground pl-1">Nenhum</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {contentPrinting.map(item => (
+                    <div key={item.id} className="flex flex-col rounded-lg border border-purple-500/20 bg-purple-500/5 px-3 py-2">
+                      <span className="text-xs font-medium text-foreground">
+                        {getSequentialUnitName(item.bimesterName, item.unitName)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{item.disciplineName} - {item.yearName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Caderno de Atividades */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600">CA</span>
+                <span className="text-xs font-medium text-muted-foreground">Caderno de Ativ. ({workbookPrinting.length})</span>
+              </div>
+              {workbookPrinting.length === 0 ? (
+                <p className="text-xs text-muted-foreground pl-1">Nenhum</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {workbookPrinting.map(item => (
+                    <div key={item.id} className="flex flex-col rounded-lg border border-purple-500/20 bg-purple-500/5 px-3 py-2">
+                      <span className="text-xs font-medium text-foreground">
+                        {getSequentialUnitName(item.bimesterName, item.unitName)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{item.disciplineName} - {item.yearName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>
@@ -454,15 +536,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Alertas de Prazo e Progresso */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <DeadlineAlerts 
-          calendarItems={calendarItems} 
-          kanbanItems={kanbanItems} 
-          workbookItems={workbookItems} 
+      {/* Alertas de Prazo e Fila de Impressão */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <DeadlineAlerts
+          calendarItems={calendarItems}
+          kanbanItems={kanbanItems}
+          workbookItems={workbookItems}
         />
-        
-        <Card className="border-border bg-card lg:col-span-2">
+        <PrintingQueue kanbanItems={kanbanItems} workbookItems={workbookItems} />
+      </div>
+
+      {/* Progresso */}
+      <div className="grid gap-4">
+        <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground">
               <TrendingUp className="h-5 w-5 text-primary" />
