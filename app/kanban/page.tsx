@@ -27,11 +27,12 @@ interface KanbanColumnProps {
   onDrop: (itemId: string, newStatus: KanbanStatus) => void
   onRemove: (id: string) => void
   onToggleApproval: (id: string, approved: boolean) => void
+  isMobile?: boolean
   draggedItem: DragItem | null
   setDraggedItem: (item: DragItem | null) => void
 }
 
-function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, draggedItem, setDraggedItem }: KanbanColumnProps) {
+function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, isMobile, draggedItem, setDraggedItem }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const columnItems = items.filter(item => item.status === column.id)
@@ -64,20 +65,24 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, dragg
     }
   }, [column.id, draggedItem, onDrop])
 
+  const nextColumns = COLUMNS.filter(c => c.id !== column.id)
+
   return (
-    <div className="flex-1 min-w-[260px]">
-      <div className={`flex items-center gap-2 mb-4 pb-3 border-b-2 ${column.borderColor}`}>
-        <Icon className={`h-5 w-5 ${column.color}`} />
-        <h2 className="font-semibold text-foreground">{column.title}</h2>
-        <span className="ml-auto rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-          {columnItems.length}
-        </span>
-      </div>
+    <div className={isMobile ? 'w-full' : 'flex-1 min-w-[260px]'}>
+      {!isMobile && (
+        <div className={`flex items-center gap-2 mb-4 pb-3 border-b-2 ${column.borderColor}`}>
+          <Icon className={`h-5 w-5 ${column.color}`} />
+          <h2 className="font-semibold text-foreground">{column.title}</h2>
+          <span className="ml-auto rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            {columnItems.length}
+          </span>
+        </div>
+      )}
 
       <div
-        className={`min-h-[400px] rounded-lg border-2 border-dashed p-2 transition-colors ${
-          isOver ? 'border-primary bg-primary/5' : 'border-transparent'
-        }`}
+        className={`rounded-lg border-2 border-dashed p-2 transition-colors ${
+          isMobile ? 'min-h-[200px]' : 'min-h-[400px]'
+        } ${isOver ? 'border-primary bg-primary/5' : 'border-transparent'}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -86,16 +91,16 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, dragg
           {columnItems.map((item) => {
             const isExpanded = expandedItems.has(item.id)
             const chapterCount = item.chapters?.length || 0
-            
+
             return (
               <Card
                 key={item.id}
-                draggable
-                onDragStart={() => setDraggedItem({ id: item.id, status: item.status })}
-                onDragEnd={() => setDraggedItem(null)}
-                className={`cursor-grab active:cursor-grabbing border-border bg-card hover:bg-muted/30 transition-colors group ${
-                  column.id === 'completed' ? 'opacity-80' : ''
-                }`}
+                draggable={!isMobile}
+                onDragStart={() => !isMobile && setDraggedItem({ id: item.id, status: item.status })}
+                onDragEnd={() => !isMobile && setDraggedItem(null)}
+                className={`border-border bg-card transition-colors group ${
+                  isMobile ? '' : 'cursor-grab active:cursor-grabbing hover:bg-muted/30'
+                } ${column.id === 'completed' ? 'opacity-80' : ''}`}
               >
                 <CardContent className="p-3">
                   {/* Badge da disciplina em destaque */}
@@ -106,14 +111,18 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, dragg
                     </span>
                     <button
                       onClick={() => onRemove(item.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive flex-shrink-0"
+                      className={`text-muted-foreground hover:text-destructive flex-shrink-0 transition-opacity ${
+                        isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
 
                   <div className="flex items-start gap-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                    {!isMobile && (
+                      <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1">
                         <button
@@ -155,6 +164,25 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, dragg
                         </div>
                       )}
 
+                      {/* Mover para (mobile only) */}
+                      {isMobile && column.id !== 'completed' && (
+                        <div className="mt-2 ml-5 flex items-center gap-1 flex-wrap">
+                          <span className="text-xs text-muted-foreground">Mover para:</span>
+                          {nextColumns.map(col => {
+                            const ColIcon = col.icon
+                            return (
+                              <button
+                                key={col.id}
+                                onClick={() => onDrop(item.id, col.id)}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors bg-card hover:bg-muted ${col.borderColor} ${col.color}`}
+                              >
+                                <ColIcon className="h-3 w-3" />
+                                {col.title}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -188,12 +216,12 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, dragg
               </Card>
             )
           })}
-          
+
           {columnItems.length === 0 && !isOver && (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Icon className="h-8 w-8 text-muted-foreground/30 mb-2" />
               <p className="text-xs text-muted-foreground">
-                Arraste itens para cá
+                {isMobile ? 'Nenhum item aqui' : 'Arraste itens para cá'}
               </p>
             </div>
           )}
@@ -292,8 +320,8 @@ function AddUnitsModal({ discipline, existingItems, scheduledUnitIds, onAdd, onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <Card className="w-full max-w-2xl max-h-[80vh] border-border bg-card flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-0 sm:p-4">
+      <Card className="w-full sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] border-border bg-card flex flex-col rounded-b-none sm:rounded-lg">
         <CardHeader className="flex-shrink-0">
           <CardTitle className="text-card-foreground flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
@@ -412,6 +440,7 @@ export default function KanbanPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedDiscipline, setSelectedDiscipline] = useState<string>('all')
   const [selectedBimester, setSelectedBimester] = useState<string>('all')
+  const [mobileColumn, setMobileColumn] = useState<KanbanStatus>('production')
 
   const loading = disciplinesLoading || kanbanLoading || calendarLoading
 
@@ -476,7 +505,7 @@ export default function KanbanPage() {
   return (
     <div className="space-y-6">
       {/* Header com UserIdentifier */}
-      <div className="flex justify-between items-center pb-4 border-b border-border">
+      <div className="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/20">
             <BookOpen className="h-6 w-6 text-primary" />
@@ -589,29 +618,32 @@ export default function KanbanPage() {
       )}
 
       {/* Resumo e acoes */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {COLUMNS.map((col, index) => (
             <div key={col.id} className="flex items-center gap-2">
-              {index > 0 && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className={`h-3 w-3 rounded-full ${
+              {index > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground hidden sm:block" />}
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+                <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
                   col.id === 'production' ? 'bg-chart-3' :
                   col.id === 'layout' ? 'bg-chart-2' :
                   col.id === 'printing' ? 'bg-chart-5' : 'bg-primary'
                 }`} />
-                <span>{col.title} ({filteredItems.filter(i => i.status === col.id).length})</span>
+                <span className="hidden sm:inline">{col.title} </span>
+                <span>({filteredItems.filter(i => i.status === col.id).length})</span>
               </div>
             </div>
           ))}
         </div>
-        
-        <Button 
-          onClick={() => setShowAddModal(true)} 
+
+        <Button
+          onClick={() => setShowAddModal(true)}
           disabled={disciplines.length === 0 || selectedDiscipline === 'all'}
+          size="sm"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Unidades
+          <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">Adicionar Unidades</span>
+          <span className="sm:hidden">Adicionar</span>
         </Button>
       </div>
 
@@ -632,20 +664,65 @@ export default function KanbanPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {COLUMNS.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              items={filteredItems}
-              onDrop={handleDrop}
-              onRemove={handleRemove}
-              onToggleApproval={handleToggleApproval}
-              draggedItem={draggedItem}
-              setDraggedItem={setDraggedItem}
-            />
-          ))}
-        </div>
+        <>
+          {/* Seletor de coluna — mobile only */}
+          <div className="grid grid-cols-4 gap-1 sm:hidden">
+            {COLUMNS.map(col => {
+              const ColIcon = col.icon
+              const count = filteredItems.filter(i => i.status === col.id).length
+              return (
+                <button
+                  key={col.id}
+                  onClick={() => setMobileColumn(col.id)}
+                  className={`flex flex-col items-center gap-1 py-2 rounded-lg border text-xs font-medium transition-colors ${
+                    mobileColumn === col.id
+                      ? `${col.borderColor} bg-muted/50 ${col.color}`
+                      : 'border-border text-muted-foreground hover:bg-muted/30'
+                  }`}
+                >
+                  <ColIcon className="h-4 w-4" />
+                  <span className="truncate w-full text-center px-1">{col.title}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                    mobileColumn === col.id ? 'bg-primary/20' : 'bg-muted'
+                  }`}>{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Coluna única — mobile */}
+          <div className="sm:hidden">
+            {COLUMNS.filter(col => col.id === mobileColumn).map(column => (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                items={filteredItems}
+                onDrop={handleDrop}
+                onRemove={handleRemove}
+                onToggleApproval={handleToggleApproval}
+                isMobile
+                draggedItem={draggedItem}
+                setDraggedItem={setDraggedItem}
+              />
+            ))}
+          </div>
+
+          {/* Todas as colunas lado a lado — desktop */}
+          <div className="hidden sm:flex gap-4 overflow-x-auto pb-4">
+            {COLUMNS.map((column) => (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                items={filteredItems}
+                onDrop={handleDrop}
+                onRemove={handleRemove}
+                onToggleApproval={handleToggleApproval}
+                draggedItem={draggedItem}
+                setDraggedItem={setDraggedItem}
+              />
+            ))}
+          </div>
+        </>
       )}
 
       {showAddModal && currentDiscipline && (
