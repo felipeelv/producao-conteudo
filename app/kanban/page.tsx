@@ -122,6 +122,8 @@ function KanbanColumn({ column, items, onDrop, onRemove, draggedItem, setDragged
                         {chapterCount} capítulo(s)
                       </p>
                       <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground ml-5">
+                        <span className="font-medium text-foreground/70">{item.disciplineName}</span>
+                        <span>·</span>
                         <span>{item.yearName}</span>
                         <span>-</span>
                         <span>{item.bimesterName}</span>
