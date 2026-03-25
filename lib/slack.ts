@@ -8,6 +8,7 @@ export interface SlackNotifyPayload {
   previousStatus: KanbanStatus
   newStatus: KanbanStatus
   boardType: 'content' | 'workbook'
+  userName?: string
 }
 
 const STATUS_LABELS: Record<KanbanStatus, string> = {
@@ -52,7 +53,7 @@ export function getWebhookUrl(boardType: 'content' | 'workbook', newStatus: Kanb
 }
 
 export function formatSlackMessage(payload: SlackNotifyPayload) {
-  const { unitName, disciplineName, yearName, bimesterName, previousStatus, newStatus, boardType } = payload
+  const { unitName, disciplineName, yearName, bimesterName, previousStatus, newStatus, boardType, userName } = payload
 
   return {
     attachments: [
@@ -80,6 +81,15 @@ export function formatSlackMessage(payload: SlackNotifyPayload) {
               text: `${STATUS_LABELS[previousStatus]} → ${STATUS_LABELS[newStatus]}`,
             },
           },
+          {
+            type: 'context',
+            elements: [
+              {
+                type: 'mrkdwn',
+                text: `👤 *Feito por:* ${userName || 'Autor não identificado'}`
+              }
+            ]
+          }
         ],
       },
     ],

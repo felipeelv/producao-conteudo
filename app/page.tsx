@@ -91,10 +91,10 @@ function RecentActivity({ items }: { items: KanbanItem[] }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {item.chapterName}
+                    {getSequentialUnitName(item.bimesterName, item.unitName)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {item.disciplineName} - {getSequentialUnitName(item.bimesterName, item.unitName)}
+                    {item.disciplineName} - {item.yearName}
                   </p>
                 </div>
               </div>
@@ -115,7 +115,7 @@ interface DeadlineAlert {
   bimesterName: string
   date: string
   daysRemaining: number
-  status: KanbanStatusType | null
+  status: string | null
 }
 
 function DeadlineAlerts({ 
@@ -162,7 +162,7 @@ function DeadlineAlerts({
         status
       }
     })
-    .filter((alert): alert is DeadlineAlert => alert !== null)
+    .filter((alert): alert is NonNullable<typeof alert> => alert !== null)
     .filter(alert => alert.daysRemaining <= 7) // Mostrar apenas próximos 7 dias ou atrasados
     .sort((a, b) => a.daysRemaining - b.daysRemaining)
   
@@ -205,7 +205,7 @@ function DeadlineAlerts({
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
             {alerts.slice(0, 10).map(alert => {
               const style = getPriorityStyle(alert.daysRemaining)
-              const statusIndicator = alert.status ? getStatusIndicator(alert.status) : null
+              const statusIndicator = alert.status ? getStatusIndicator(alert.status as KanbanStatusType) : null
               
               return (
                 <div 

@@ -7,6 +7,7 @@ import { useDisciplines, useWorkbookItems, useCalendarItems } from '@/hooks/use-
 import { Discipline, WorkbookItem, KanbanStatus } from '@/lib/types'
 import { getSequentialUnitName } from '@/lib/utils'
 import { FileText, Layers, Printer, CheckCircle2, GripVertical, X, Plus, ChevronDown, ChevronRight, BookOpen, ChevronLeft, Filter, Loader2 } from 'lucide-react'
+import { UserIdentifier } from '@/components/user-identifier'
 
 const COLUMNS: { id: KanbanStatus; title: string; icon: React.ElementType; color: string; borderColor: string }[] = [
   { id: 'production', title: 'Produção', icon: FileText, color: 'text-chart-3', borderColor: 'border-chart-3' },
@@ -437,14 +438,17 @@ export default function KanbanAtividadesPage() {
   return (
     <div className="space-y-6">
       {/* Header com icone diferenciado */}
-      <div className="flex items-center gap-3 pb-4 border-b border-border">
-        <div className="p-2 rounded-lg bg-accent/20">
-          <BookOpen className="h-6 w-6 text-accent" />
+      <div className="flex items-center justify-between pb-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-accent/20">
+            <BookOpen className="h-6 w-6 text-accent" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Kanban - Caderno de Atividades</h1>
+            <p className="text-sm text-muted-foreground">Gerencie a producao dos cadernos de atividades</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Kanban - Caderno de Atividades</h1>
-          <p className="text-sm text-muted-foreground">Gerencie a producao dos cadernos de atividades</p>
-        </div>
+        <UserIdentifier />
       </div>
 
       {/* Abas de disciplinas com scroll */}

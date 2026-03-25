@@ -150,6 +150,7 @@ export function useKanbanItems() {
       }
 
       if (item) {
+        const userName = typeof window !== 'undefined' ? localStorage.getItem('kanban_user_name') : null;
         fetch('/api/slack/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -161,6 +162,7 @@ export function useKanbanItems() {
             previousStatus: item.status,
             newStatus: status,
             boardType: 'content',
+            userName: userName || 'Autor não identificado'
           }),
         }).catch(err => console.error('Slack notify failed:', err))
       }
@@ -317,6 +319,7 @@ export function useWorkbookItems() {
       }
 
       if (item) {
+        const userName = typeof window !== 'undefined' ? localStorage.getItem('kanban_user_name') : null;
         fetch('/api/slack/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -328,6 +331,7 @@ export function useWorkbookItems() {
             previousStatus: item.status,
             newStatus: status,
             boardType: 'workbook',
+            userName: userName || 'Autor não identificado'
           }),
         }).catch(err => console.error('Slack notify failed:', err))
       }

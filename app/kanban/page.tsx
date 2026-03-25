@@ -7,6 +7,7 @@ import { useDisciplines, useKanbanItems, useCalendarItems } from '@/hooks/use-pr
 import { Discipline, KanbanItem, KanbanStatus } from '@/lib/types'
 import { getSequentialUnitName } from '@/lib/utils'
 import { FileText, Layers, Printer, CheckCircle2, GripVertical, X, Plus, ChevronDown, ChevronRight, BookOpen, ChevronLeft, Filter, Loader2 } from 'lucide-react'
+import { UserIdentifier } from '@/components/user-identifier'
 
 const COLUMNS: { id: KanbanStatus; title: string; icon: React.ElementType; color: string; borderColor: string }[] = [
   { id: 'production', title: 'Produção', icon: FileText, color: 'text-chart-3', borderColor: 'border-chart-3' },
@@ -432,6 +433,20 @@ export default function KanbanPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header com UserIdentifier */}
+      <div className="flex justify-between items-center pb-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/20">
+            <BookOpen className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Kanban - Conteúdos</h1>
+            <p className="text-sm text-muted-foreground">Gerencie a produção dos conteúdos</p>
+          </div>
+        </div>
+        <UserIdentifier />
+      </div>
+
       {/* Abas de disciplinas com scroll */}
       <div className="flex items-center gap-2 border-b border-border">
         <button
