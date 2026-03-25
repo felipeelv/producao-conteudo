@@ -122,7 +122,7 @@ export function useKanbanItems() {
 
   useEffect(() => {
     fetchKanbanItems()
-    const interval = setInterval(fetchKanbanItems, 30000)
+    const interval = setInterval(fetchKanbanItems, 300000)
     const onVisible = () => { if (document.visibilityState === 'visible') fetchKanbanItems() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
@@ -262,7 +262,7 @@ export function useCalendarItems() {
 
   useEffect(() => {
     fetchCalendarItems()
-    const interval = setInterval(fetchCalendarItems, 30000)
+    const interval = setInterval(fetchCalendarItems, 300000)
     const onVisible = () => { if (document.visibilityState === 'visible') fetchCalendarItems() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
@@ -340,7 +340,7 @@ export function useWorkbookItems() {
 
   useEffect(() => {
     fetchWorkbookItems()
-    const interval = setInterval(fetchWorkbookItems, 30000)
+    const interval = setInterval(fetchWorkbookItems, 300000)
     const onVisible = () => { if (document.visibilityState === 'visible') fetchWorkbookItems() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
@@ -520,7 +520,7 @@ export function useProductionStats() {
 
   useEffect(() => {
     fetchStats()
-    const interval = setInterval(fetchStats, 30000)
+    const interval = setInterval(fetchStats, 300000)
     const onVisible = () => { if (document.visibilityState === 'visible') fetchStats() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
