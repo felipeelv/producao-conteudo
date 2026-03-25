@@ -157,7 +157,7 @@ export function useKanbanItems() {
         }
       }
 
-      if (item) {
+      if (item && status !== 'printing') {
         const userName = typeof window !== 'undefined' ? localStorage.getItem('kanban_user_name') : null;
         fetch('/api/slack/notify', {
           method: 'POST',
@@ -200,11 +200,33 @@ export function useKanbanItems() {
       setKanbanItems(prev => prev.map(i =>
         i.id === id ? { ...i, printApproved: approved } : i
       ))
+
+      if (approved) {
+        const item = kanbanItems.find(i => i.id === id)
+        if (item) {
+          const userName = typeof window !== 'undefined' ? localStorage.getItem('kanban_user_name') : null
+          fetch('/api/slack/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              unitName: item.unitName,
+              disciplineName: item.disciplineName,
+              yearName: item.yearName,
+              bimesterName: item.bimesterName,
+              previousStatus: item.status,
+              newStatus: 'printing',
+              boardType: 'content',
+              userName: userName || 'Autor não identificado',
+              isApproval: true
+            }),
+          }).catch(err => console.error('Slack notify failed:', err))
+        }
+      }
     } catch (err) {
       setError('Erro ao atualizar aprovação')
       console.error(err)
     }
-  }, [])
+  }, [kanbanItems])
 
   return {
     kanbanItems,

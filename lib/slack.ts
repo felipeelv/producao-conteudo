@@ -9,6 +9,7 @@ export interface SlackNotifyPayload {
   newStatus: KanbanStatus
   boardType: 'content' | 'workbook'
   userName?: string
+  isApproval?: boolean
 }
 
 const STATUS_LABELS: Record<KanbanStatus, string> = {
@@ -53,18 +54,26 @@ export function getWebhookUrl(boardType: 'content' | 'workbook', newStatus: Kanb
 }
 
 export function formatSlackMessage(payload: SlackNotifyPayload) {
-  const { unitName, disciplineName, yearName, bimesterName, previousStatus, newStatus, boardType, userName } = payload
+  const { unitName, disciplineName, yearName, bimesterName, previousStatus, newStatus, boardType, userName, isApproval } = payload
+
+  const headerText = isApproval
+    ? `✅ Aprovado para impressão — ${BOARD_LABELS[boardType]}`
+    : `${STATUS_EMOJIS[newStatus]} Kanban — ${BOARD_LABELS[boardType]}`
+
+  const statusText = isApproval
+    ? `*Aprovado para impressão* por ${userName || 'Autor não identificado'}`
+    : `${STATUS_LABELS[previousStatus]} → ${STATUS_LABELS[newStatus]}`
 
   return {
     attachments: [
       {
-        color: STATUS_COLORS[newStatus],
+        color: isApproval ? '#10b981' : STATUS_COLORS[newStatus],
         blocks: [
           {
             type: 'header',
             text: {
               type: 'plain_text',
-              text: `${STATUS_EMOJIS[newStatus]} Kanban — ${BOARD_LABELS[boardType]}`,
+              text: headerText,
             },
           },
           {
@@ -78,7 +87,7 @@ export function formatSlackMessage(payload: SlackNotifyPayload) {
             type: 'section',
             text: {
               type: 'mrkdwn',
-              text: `${STATUS_LABELS[previousStatus]} → ${STATUS_LABELS[newStatus]}`,
+              text: statusText,
             },
           },
           {

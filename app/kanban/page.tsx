@@ -155,34 +155,35 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, dragg
                         </div>
                       )}
 
-                      {/* Botão de aprovação para impressão */}
-                      {column.id === 'printing' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onToggleApproval(item.id, !item.printApproved)
-                          }}
-                          className={`mt-2 ml-5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border transition-colors w-full justify-center ${
-                            item.printApproved
-                              ? 'bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20'
-                              : 'bg-orange-500/10 text-orange-600 border-orange-500/30 hover:bg-orange-500/20'
-                          }`}
-                        >
-                          {item.printApproved ? (
-                            <>
-                              <ShieldCheck className="h-3.5 w-3.5" />
-                              Aprovado para impressão
-                            </>
-                          ) : (
-                            <>
-                              <ShieldAlert className="h-3.5 w-3.5" />
-                              Aguardando aprovação
-                            </>
-                          )}
-                        </button>
-                      )}
                     </div>
                   </div>
+
+                  {/* Rodapé de aprovação para impressão */}
+                  {column.id === 'printing' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleApproval(item.id, !item.printApproved)
+                      }}
+                      className={`mt-3 -mx-3 -mb-3 w-[calc(100%+1.5rem)] flex items-center justify-center gap-2 py-2 text-xs font-semibold border-t transition-colors rounded-b-lg ${
+                        item.printApproved
+                          ? 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20'
+                          : 'bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20'
+                      }`}
+                    >
+                      {item.printApproved ? (
+                        <>
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          Aprovado para impressão
+                        </>
+                      ) : (
+                        <>
+                          <ShieldAlert className="h-3.5 w-3.5" />
+                          Aguardando aprovação
+                        </>
+                      )}
+                    </button>
+                  )}
                 </CardContent>
               </Card>
             )
