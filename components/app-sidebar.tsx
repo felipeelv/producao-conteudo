@@ -3,15 +3,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar, FileJson, CheckSquare, Kanban, BookOpen } from 'lucide-react'
+import { LayoutDashboard, Calendar, Kanban, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/calendario', label: 'Calendário', icon: Calendar },
-  { href: '/cadastro', label: 'Cadastro JSON', icon: FileJson },
-  { href: '/controle', label: 'Controle de Produção', icon: CheckSquare },
-  { href: '/kanban', label: 'Kanban - Conteúdos', icon: Kanban },
+{ href: '/kanban', label: 'Kanban - Conteúdos', icon: Kanban },
   { href: '/kanban-atividades', label: 'Kanban - Caderno de Ativ.', icon: BookOpen },
 ]
 
