@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useDisciplines, useKanbanItems, useCalendarItems } from '@/hooks/use-production-data'
 import { Discipline, KanbanItem, KanbanStatus } from '@/lib/types'
 import { getSequentialUnitName } from '@/lib/utils'
-import { FileText, Layers, Printer, CheckCircle2, GripVertical, X, Plus, ChevronDown, ChevronRight, BookOpen, ChevronLeft, Filter, Loader2 } from 'lucide-react'
+import { FileText, Layers, Printer, CheckCircle2, GripVertical, X, Plus, ChevronDown, ChevronRight, BookOpen, ChevronLeft, Filter, Loader2, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { UserIdentifier } from '@/components/user-identifier'
 
 const COLUMNS: { id: KanbanStatus; title: string; icon: React.ElementType; color: string; borderColor: string }[] = [
@@ -26,11 +26,12 @@ interface KanbanColumnProps {
   items: KanbanItem[]
   onDrop: (itemId: string, newStatus: KanbanStatus) => void
   onRemove: (id: string) => void
+  onToggleApproval: (id: string, approved: boolean) => void
   draggedItem: DragItem | null
   setDraggedItem: (item: DragItem | null) => void
 }
 
-function KanbanColumn({ column, items, onDrop, onRemove, draggedItem, setDraggedItem }: KanbanColumnProps) {
+function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, draggedItem, setDraggedItem }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false)
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const columnItems = items.filter(item => item.status === column.id)
@@ -97,6 +98,20 @@ function KanbanColumn({ column, items, onDrop, onRemove, draggedItem, setDragged
                 }`}
               >
                 <CardContent className="p-3">
+                  {/* Badge da disciplina em destaque */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20 truncate max-w-[80%]">
+                      <BookOpen className="h-3 w-3 flex-shrink-0" />
+                      {item.disciplineName}
+                    </span>
+                    <button
+                      onClick={() => onRemove(item.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive flex-shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
                   <div className="flex items-start gap-2">
                     <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
@@ -122,18 +137,16 @@ function KanbanColumn({ column, items, onDrop, onRemove, draggedItem, setDragged
                         {chapterCount} capítulo(s)
                       </p>
                       <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground ml-5">
-                        <span className="font-medium text-foreground/70">{item.disciplineName}</span>
-                        <span>·</span>
                         <span>{item.yearName}</span>
                         <span>-</span>
                         <span>{item.bimesterName}</span>
                       </div>
-                      
+
                       {isExpanded && item.chapters && item.chapters.length > 0 && (
                         <div className="mt-2 ml-5 space-y-1 border-l-2 border-border pl-2">
                           {item.chapters.map((chapter, idx) => (
-                            <p 
-                              key={chapter.id || idx} 
+                            <p
+                              key={chapter.id || idx}
                               className={`text-xs ${column.id === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground/80'}`}
                             >
                               {chapter.name}
@@ -141,13 +154,34 @@ function KanbanColumn({ column, items, onDrop, onRemove, draggedItem, setDragged
                           ))}
                         </div>
                       )}
+
+                      {/* Botão de aprovação para impressão */}
+                      {column.id === 'printing' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onToggleApproval(item.id, !item.printApproved)
+                          }}
+                          className={`mt-2 ml-5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border transition-colors w-full justify-center ${
+                            item.printApproved
+                              ? 'bg-green-500/10 text-green-600 border-green-500/30 hover:bg-green-500/20'
+                              : 'bg-orange-500/10 text-orange-600 border-orange-500/30 hover:bg-orange-500/20'
+                          }`}
+                        >
+                          {item.printApproved ? (
+                            <>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Aprovado para impressão
+                            </>
+                          ) : (
+                            <>
+                              <ShieldAlert className="h-3.5 w-3.5" />
+                              Aguardando aprovação
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
-                    <button
-                      onClick={() => onRemove(item.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
                   </div>
                 </CardContent>
               </Card>
@@ -370,7 +404,7 @@ function AddUnitsModal({ discipline, existingItems, scheduledUnitIds, onAdd, onC
 
 export default function KanbanPage() {
   const { disciplines, loading: disciplinesLoading } = useDisciplines()
-  const { kanbanItems, loading: kanbanLoading, addItem, updateStatus, removeItem, setKanbanItems } = useKanbanItems()
+  const { kanbanItems, loading: kanbanLoading, addItem, updateStatus, removeItem, updatePrintApproval, setKanbanItems } = useKanbanItems()
   const { calendarItems, loading: calendarLoading } = useCalendarItems()
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -390,6 +424,10 @@ export default function KanbanPage() {
   const handleRemove = useCallback(async (id: string) => {
     await removeItem(id)
   }, [removeItem])
+
+  const handleToggleApproval = useCallback(async (id: string, approved: boolean) => {
+    await updatePrintApproval(id, approved)
+  }, [updatePrintApproval])
 
   const handleAddUnits = useCallback(async (items: Omit<KanbanItem, 'id' | 'createdAt'>[]) => {
     for (const item of items) {
@@ -600,6 +638,7 @@ export default function KanbanPage() {
               items={filteredItems}
               onDrop={handleDrop}
               onRemove={handleRemove}
+              onToggleApproval={handleToggleApproval}
               draggedItem={draggedItem}
               setDraggedItem={setDraggedItem}
             />

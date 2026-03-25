@@ -10,6 +10,7 @@ import {
   getKanbanItemsFromDB,
   addKanbanItemToDB,
   updateKanbanItemStatusInDB,
+  updateKanbanItemPrintApprovalInDB,
   removeKanbanItemFromDB,
   getCalendarItemsFromDB,
   addCalendarItemToDB,
@@ -193,6 +194,18 @@ export function useKanbanItems() {
     }
   }, [])
 
+  const updatePrintApproval = useCallback(async (id: string, approved: boolean) => {
+    try {
+      await updateKanbanItemPrintApprovalInDB(id, approved)
+      setKanbanItems(prev => prev.map(i =>
+        i.id === id ? { ...i, printApproved: approved } : i
+      ))
+    } catch (err) {
+      setError('Erro ao atualizar aprovação')
+      console.error(err)
+    }
+  }, [])
+
   return {
     kanbanItems,
     loading,
@@ -201,6 +214,7 @@ export function useKanbanItems() {
     addItem,
     updateStatus,
     removeItem,
+    updatePrintApproval,
     setKanbanItems
   }
 }

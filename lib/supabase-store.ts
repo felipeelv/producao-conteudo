@@ -124,12 +124,12 @@ export async function getKanbanItemsFromDB(): Promise<KanbanItem[]> {
     .from('kanban_items')
     .select('*')
     .order('created_at', { ascending: true })
-  
+
   if (error) {
     console.error('Error fetching kanban items:', error)
     return []
   }
-  
+
   return data.map(row => ({
     id: row.id,
     disciplineId: row.discipline_id,
@@ -142,6 +142,7 @@ export async function getKanbanItemsFromDB(): Promise<KanbanItem[]> {
     unitName: row.unit_name,
     chapters: row.chapters || [],
     status: row.status as KanbanStatus,
+    printApproved: row.print_approved ?? false,
     createdAt: row.created_at
   }))
 }
@@ -161,16 +162,17 @@ export async function addKanbanItemToDB(item: Omit<KanbanItem, 'id' | 'createdAt
       unit_id: item.unitId,
       unit_name: item.unitName,
       chapters: item.chapters,
-      status: item.status
+      status: item.status,
+      print_approved: false
     })
     .select()
     .single()
-  
+
   if (error) {
     console.error('Error adding kanban item:', error)
     return null
   }
-  
+
   return {
     id: data.id,
     disciplineId: data.discipline_id,
@@ -183,6 +185,7 @@ export async function addKanbanItemToDB(item: Omit<KanbanItem, 'id' | 'createdAt
     unitName: data.unit_name,
     chapters: data.chapters || [],
     status: data.status as KanbanStatus,
+    printApproved: data.print_approved ?? false,
     createdAt: data.created_at
   }
 }
@@ -200,13 +203,25 @@ export async function updateKanbanItemStatusInDB(id: string, status: KanbanStatu
   }
 }
 
+export async function updateKanbanItemPrintApprovalInDB(id: string, printApproved: boolean): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('kanban_items')
+    .update({ print_approved: printApproved, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating kanban item print approval:', error)
+  }
+}
+
 export async function removeKanbanItemFromDB(id: string): Promise<void> {
   const supabase = createClient()
   const { error } = await supabase
     .from('kanban_items')
     .delete()
     .eq('id', id)
-  
+
   if (error) {
     console.error('Error removing kanban item:', error)
   }

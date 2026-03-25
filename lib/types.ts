@@ -77,6 +77,7 @@ export interface KanbanItem {
   unitName: string
   chapters: KanbanChapter[]
   status: KanbanStatus
+  printApproved: boolean
   createdAt: string
 }
 
