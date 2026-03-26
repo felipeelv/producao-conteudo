@@ -190,14 +190,14 @@ export async function addKanbanItemToDB(item: Omit<KanbanItem, 'id' | 'createdAt
   }
 }
 
-export async function updateKanbanItemStatusInDB(id: string, status: KanbanStatus): Promise<void> {
+export async function updateKanbanItemStatusInDB(id: string, status: KanbanStatus, changedBy?: string): Promise<void> {
   const supabase = createClient()
-  
+
   const { error } = await supabase
     .from('kanban_items')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status, changed_by: changedBy ?? null, updated_at: new Date().toISOString() })
     .eq('id', id)
-  
+
   if (error) {
     console.error('Error updating kanban item status:', error)
   }

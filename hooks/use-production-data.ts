@@ -148,7 +148,8 @@ export function useKanbanItems() {
   const updateStatus = useCallback(async (id: string, status: KanbanStatus, markCompleted = true) => {
     try {
       const item = kanbanItems.find(i => i.id === id)
-      await updateKanbanItemStatusInDB(id, status)
+      const userName = typeof window !== 'undefined' ? localStorage.getItem('kanban_user_name') : null
+      await updateKanbanItemStatusInDB(id, status, userName ?? undefined)
 
       // Se moveu para completed, marca a unidade como concluida
       if (status === 'completed' && markCompleted) {
