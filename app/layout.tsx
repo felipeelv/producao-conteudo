@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { AppSidebar } from '@/components/app-sidebar'
 import { AppHeader } from '@/components/app-header'
+import { MobileNav } from '@/components/mobile-nav'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -28,10 +29,11 @@ export default function RootLayout({
         <div className="hidden md:block print-hide"><AppSidebar /></div>
         <div className="md:ml-64 min-h-screen print-main-wrapper">
           <div className="hidden md:block print-hide"><AppHeader /></div>
-          <main className="p-0 md:p-6">
+          <main className="p-0 md:p-6 pb-16 md:pb-6">
             {children}
           </main>
         </div>
+        <MobileNav />
         <Analytics />
       </body>
     </html>

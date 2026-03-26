@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useDisciplines, useKanbanItems, useWorkbookItems, useCalendarItems, useProductionStats } from '@/hooks/use-production-data'
@@ -404,14 +402,7 @@ function DisciplinesList({ disciplines }: { disciplines: Discipline[] }) {
 }
 
 export default function DashboardPage() {
-  const router = useRouter()
   const isMobile = useIsMobile()
-
-  useEffect(() => {
-    if (isMobile) {
-      router.replace('/calendario')
-    }
-  }, [isMobile, router])
 
   const { stats, loading: statsLoading } = useProductionStats()
   const { disciplines, loading: disciplinesLoading } = useDisciplines()
