@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Movimentações de hoje:*\n${movementLines.join('\n')}\n\n_${movementLines.length} movimentação${movementLines.length > 1 ? 'ões' : ''} no total_`,
+        text: `*Movimentações de hoje:*\n${movementLines.join('\n')}\n\n_${movementLines.length === 1 ? '1 movimentação' : `${movementLines.length} movimentações`} no total_`,
       },
     })
   } else {

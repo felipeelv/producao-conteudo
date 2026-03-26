@@ -159,7 +159,6 @@ export function useKanbanItems() {
       }
 
       if (item && status !== 'printing') {
-        const userName = typeof window !== 'undefined' ? localStorage.getItem('kanban_user_name') : null;
         fetch('/api/slack/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
