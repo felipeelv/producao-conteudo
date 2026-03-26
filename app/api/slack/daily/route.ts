@@ -8,6 +8,20 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Concluído',
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  production: '#ef4444',
+  layout: '#f59e0b',
+  printing: '#3b82f6',
+  completed: '#10b981',
+}
+
+const STATUS_EMOJIS: Record<string, string> = {
+  production: '🔴',
+  layout: '🟡',
+  printing: '🔵',
+  completed: '🟢',
+}
+
 function formatDate(date: Date): string {
   return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`
 }
@@ -39,28 +53,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch logs' }, { status: 500 })
   }
 
-  // Buscar dados dos itens que mudaram
-  let movementLines: string[] = []
-  if (logs && logs.length > 0) {
-    const itemIds = [...new Set(logs.map(l => l.kanban_item_id))]
-    const { data: items } = await supabase
-      .from('kanban_items')
-      .select('id, discipline_name, year_name, unit_name')
-      .in('id', itemIds)
-
-    const itemMap = new Map((items ?? []).map(i => [i.id, i]))
-
-    movementLines = logs.map(log => {
-      const item = itemMap.get(log.kanban_item_id)
-      const name = item
-        ? `${item.discipline_name} ${item.year_name} — ${item.unit_name}`
-        : 'Item removido'
-      const from = STATUS_LABELS[log.previous_status] ?? log.previous_status
-      const to = STATUS_LABELS[log.new_status] ?? log.new_status
-      return `• ${name}: ${from} → ${to}`
-    })
-  }
-
   // Query 2: Pendências aprovadas (layout ou printing com print_approved = true)
   const { data: pending, error: pendingError } = await supabase
     .from('kanban_items')
@@ -77,8 +69,11 @@ export async function GET(request: NextRequest) {
   const inLayout = (pending ?? []).filter(i => i.status === 'layout')
   const inPrinting = (pending ?? []).filter(i => i.status === 'printing')
 
-  // Montar blocos da mensagem
-  const blocks: object[] = [
+  // Montar mensagem com attachments coloridos
+  const attachments: object[] = []
+
+  // Header
+  const headerBlocks: object[] = [
     {
       type: 'header',
       text: {
@@ -88,17 +83,61 @@ export async function GET(request: NextRequest) {
     },
   ]
 
-  // Bloco 1: Movimentações
-  if (movementLines.length > 0) {
-    blocks.push({
+  // Bloco 1: Movimentações — cada transição vira um attachment com a cor do destino
+  if (logs && logs.length > 0) {
+    const itemIds = [...new Set(logs.map(l => l.kanban_item_id))]
+    const { data: items } = await supabase
+      .from('kanban_items')
+      .select('id, discipline_name, year_name, unit_name')
+      .in('id', itemIds)
+
+    const itemMap = new Map((items ?? []).map(i => [i.id, i]))
+
+    // Agrupar por status de destino
+    const grouped: Record<string, typeof logs> = {}
+    for (const log of logs) {
+      if (!grouped[log.new_status]) grouped[log.new_status] = []
+      grouped[log.new_status].push(log)
+    }
+
+    headerBlocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Movimentações de hoje:*\n${movementLines.join('\n')}\n\n_${movementLines.length === 1 ? '1 movimentação' : `${movementLines.length} movimentações`} no total_`,
+        text: `*${logs.length === 1 ? '1 movimentação' : `${logs.length} movimentações`} hoje:*`,
       },
     })
+
+    for (const [status, statusLogs] of Object.entries(grouped)) {
+      const emoji = STATUS_EMOJIS[status] ?? '⚪'
+      const label = STATUS_LABELS[status] ?? status
+      const color = STATUS_COLORS[status] ?? '#808080'
+
+      const lines = statusLogs.map(log => {
+        const item = itemMap.get(log.kanban_item_id)
+        const name = item
+          ? `${item.discipline_name} ${item.year_name} — ${item.unit_name}`
+          : 'Item removido'
+        const from = STATUS_LABELS[log.previous_status] ?? log.previous_status
+        const by = log.changed_by ? ` _(${log.changed_by})_` : ''
+        return `• ${name}\n   ${from} → *${label}*${by}`
+      })
+
+      attachments.push({
+        color,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `${emoji} *Movido para ${label} (${statusLogs.length})*\n\n${lines.join('\n\n')}`,
+            },
+          },
+        ],
+      })
+    }
   } else {
-    blocks.push({
+    headerBlocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
@@ -107,41 +146,49 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  blocks.push({ type: 'divider' })
+  // Bloco 2: Pendências aprovadas
+  if (inLayout.length > 0 || inPrinting.length > 0) {
+    const parts: string[] = []
 
-  // Bloco 2: Pendências
-  const pendingParts: string[] = []
+    if (inLayout.length > 0) {
+      const lines = inLayout.map(i => `• ${i.discipline_name} ${i.year_name} — ${i.unit_name}`)
+      parts.push(`🟡 *Em Diagramação (${inLayout.length}):*\n${lines.join('\n')}`)
+    }
 
-  if (inLayout.length > 0) {
-    const lines = inLayout.map(i => `• ${i.discipline_name} ${i.year_name} — ${i.unit_name}`)
-    pendingParts.push(`*Em Diagramação (${inLayout.length}):*\n${lines.join('\n')}`)
-  }
+    if (inPrinting.length > 0) {
+      const lines = inPrinting.map(i => `• ${i.discipline_name} ${i.year_name} — ${i.unit_name}`)
+      parts.push(`🔵 *Em Impressão (${inPrinting.length}):*\n${lines.join('\n')}`)
+    }
 
-  if (inPrinting.length > 0) {
-    const lines = inPrinting.map(i => `• ${i.discipline_name} ${i.year_name} — ${i.unit_name}`)
-    pendingParts.push(`*Em Impressão (${inPrinting.length}):*\n${lines.join('\n')}`)
-  }
-
-  if (pendingParts.length > 0) {
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `📋 *Pendências — Aprovados para impressão*\n\n${pendingParts.join('\n\n')}`,
-      },
+    attachments.push({
+      color: '#6b7280',
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `📋 *Pendências — Aprovados para impressão*\n\n${parts.join('\n\n')}`,
+          },
+        },
+      ],
     })
   } else {
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: '_Nenhum item aprovado pendente._',
-      },
+    attachments.push({
+      color: '#6b7280',
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: '_Nenhum item aprovado pendente._',
+          },
+        },
+      ],
     })
   }
 
   // Enviar para o Slack
-  const message = { blocks }
+  const message = { blocks: headerBlocks, attachments }
 
   try {
     const res = await fetch(webhookUrl, {
