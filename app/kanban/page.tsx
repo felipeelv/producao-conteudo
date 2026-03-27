@@ -250,8 +250,12 @@ function ExportPDFModal({ items, onClose }: ExportPDFModalProps) {
   const [selectedDisciplines, setSelectedDisciplines] = useState<Set<string>>(
     new Set(items.map(i => i.disciplineName))
   )
+  const [selectedUnits, setSelectedUnits] = useState<Set<string>>(
+    new Set(items.map(i => getSequentialUnitName(i.bimesterName, i.unitName)))
+  )
 
   const allDisciplines = Array.from(new Set(items.map(i => i.disciplineName))).sort()
+  const allUnits = Array.from(new Set(items.map(i => getSequentialUnitName(i.bimesterName, i.unitName)))).sort()
 
   const toggleStage = (stage: KanbanStatus) => {
     const next = new Set(selectedStages)
@@ -267,8 +271,17 @@ function ExportPDFModal({ items, onClose }: ExportPDFModalProps) {
     setSelectedDisciplines(next)
   }
 
+  const toggleUnit = (name: string) => {
+    const next = new Set(selectedUnits)
+    if (next.has(name)) next.delete(name)
+    else next.add(name)
+    setSelectedUnits(next)
+  }
+
   const exportableItems = items.filter(
-    i => selectedStages.has(i.status) && selectedDisciplines.has(i.disciplineName)
+    i => selectedStages.has(i.status) &&
+         selectedDisciplines.has(i.disciplineName) &&
+         selectedUnits.has(getSequentialUnitName(i.bimesterName, i.unitName))
   )
 
   // Agrupar por disciplina
@@ -422,6 +435,50 @@ function ExportPDFModal({ items, onClose }: ExportPDFModalProps) {
                   <button
                     key={name}
                     onClick={() => toggleDiscipline(name)}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      active
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {name} ({count})
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Unidades */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-foreground">Unidades</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedUnits(new Set(allUnits))}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Todas
+                </button>
+                <button
+                  onClick={() => setSelectedUnits(new Set())}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Nenhuma
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {allUnits.map(name => {
+                const active = selectedUnits.has(name)
+                const count = items.filter(i =>
+                  getSequentialUnitName(i.bimesterName, i.unitName) === name &&
+                  selectedStages.has(i.status) &&
+                  selectedDisciplines.has(i.disciplineName)
+                ).length
+                return (
+                  <button
+                    key={name}
+                    onClick={() => toggleUnit(name)}
                     className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                       active
                         ? 'bg-primary text-primary-foreground border-primary'
