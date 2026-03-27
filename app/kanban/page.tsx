@@ -231,6 +231,236 @@ function KanbanColumn({ column, items, onDrop, onRemove, onToggleApproval, isMob
   )
 }
 
+const COLUMN_COLORS: Record<KanbanStatus, { hex: string; label: string }> = {
+  production: { hex: '#f59e0b', label: 'Produção' },
+  layout: { hex: '#3b82f6', label: 'Diagramação' },
+  printing: { hex: '#8b5cf6', label: 'Impressão' },
+  completed: { hex: '#22c55e', label: 'Concluído' }
+}
+
+interface ExportPDFModalProps {
+  items: KanbanItem[]
+  onClose: () => void
+}
+
+function ExportPDFModal({ items, onClose }: ExportPDFModalProps) {
+  const [selectedStages, setSelectedStages] = useState<Set<KanbanStatus>>(
+    new Set(['production', 'layout', 'printing', 'completed'])
+  )
+  const [selectedDisciplines, setSelectedDisciplines] = useState<Set<string>>(
+    new Set(items.map(i => i.disciplineName))
+  )
+
+  const allDisciplines = Array.from(new Set(items.map(i => i.disciplineName))).sort()
+
+  const toggleStage = (stage: KanbanStatus) => {
+    const next = new Set(selectedStages)
+    if (next.has(stage)) next.delete(stage)
+    else next.add(stage)
+    setSelectedStages(next)
+  }
+
+  const toggleDiscipline = (name: string) => {
+    const next = new Set(selectedDisciplines)
+    if (next.has(name)) next.delete(name)
+    else next.add(name)
+    setSelectedDisciplines(next)
+  }
+
+  const exportableItems = items.filter(
+    i => selectedStages.has(i.status) && selectedDisciplines.has(i.disciplineName)
+  )
+
+  // Agrupar por disciplina
+  const grouped = new Map<string, KanbanItem[]>()
+  for (const item of exportableItems) {
+    const list = grouped.get(item.disciplineName) || []
+    list.push(item)
+    grouped.set(item.disciplineName, list)
+  }
+
+  const handleExport = () => {
+    const now = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
+
+    let html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Relatório Kanban</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; color: #1a1a1a; font-size: 13px; }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .subtitle { font-size: 12px; color: #666; margin-bottom: 20px; }
+        .legend { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #555; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .discipline { margin-bottom: 20px; page-break-inside: avoid; }
+        .discipline-header { font-size: 15px; font-weight: 700; padding: 8px 12px; background: #f0f0f0; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .discipline-header .count { font-size: 11px; font-weight: 400; color: #888; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        th { text-align: left; padding: 5px 10px; background: #fafafa; border: 1px solid #e0e0e0; font-weight: 600; font-size: 11px; text-transform: uppercase; color: #666; }
+        td { padding: 5px 10px; border: 1px solid #e0e0e0; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #fff; }
+        .footer { margin-top: 28px; font-size: 10px; color: #aaa; border-top: 1px solid #e0e0e0; padding-top: 8px; }
+        @media print { body { padding: 16px; } }
+      </style></head><body>
+      <h1>Relatório de Produção — Kanban</h1>
+      <p class="subtitle">Gerado em ${now}</p>
+      <div class="legend">`
+
+    for (const stage of Array.from(selectedStages)) {
+      const c = COLUMN_COLORS[stage]
+      html += `<div class="legend-item"><span class="legend-dot" style="background:${c.hex};"></span>${c.label}</div>`
+    }
+    html += `</div>`
+
+    for (const [disciplineName, discItems] of grouped) {
+      // Ordenar por ano, bimestre, unidade
+      discItems.sort((a, b) =>
+        a.yearName.localeCompare(b.yearName) ||
+        a.bimesterName.localeCompare(b.bimesterName) ||
+        a.unitName.localeCompare(b.unitName)
+      )
+
+      html += `<div class="discipline">
+        <div class="discipline-header">
+          ${disciplineName}
+          <span class="count">${discItems.length} unidade(s)</span>
+        </div>
+        <table><thead><tr>
+          <th>Ano</th><th>Bimestre</th><th>Unidade</th><th>Etapa</th>
+        </tr></thead><tbody>`
+
+      for (const item of discItems) {
+        const c = COLUMN_COLORS[item.status]
+        const approvalNote = item.status === 'printing'
+          ? ` — ${item.printApproved ? '✅ Aprovado' : '⏳ Aguardando'}`
+          : ''
+        html += `<tr>
+          <td>${item.yearName}</td>
+          <td>${item.bimesterName}</td>
+          <td>${getSequentialUnitName(item.bimesterName, item.unitName)}</td>
+          <td><span class="badge" style="background:${c.hex};">${c.label}</span>${approvalNote}</td>
+        </tr>`
+      }
+      html += `</tbody></table></div>`
+    }
+
+    html += `<div class="footer">Colégio Eleve — Sistema de Produção de Conteúdo</div></body></html>`
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(html)
+      printWindow.document.close()
+      printWindow.onload = () => printWindow.print()
+    }
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm p-0 sm:p-4">
+      <Card className="w-full sm:max-w-lg max-h-[90vh] sm:max-h-[80vh] border-border bg-card flex flex-col rounded-b-none sm:rounded-lg">
+        <CardHeader className="flex-shrink-0">
+          <CardTitle className="text-card-foreground flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Exportar Relatório PDF
+          </CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">Escolha o que incluir no relatório</p>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-y-auto space-y-5">
+          {/* Etapas */}
+          <div>
+            <p className="text-sm font-medium text-foreground mb-2">Etapas</p>
+            <div className="flex flex-wrap gap-2">
+              {COLUMNS.map(col => {
+                const active = selectedStages.has(col.id)
+                const Icon = col.icon
+                return (
+                  <button
+                    key={col.id}
+                    onClick={() => toggleStage(col.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      active
+                        ? `${col.borderColor} ${col.color} bg-primary/10`
+                        : 'border-border text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {col.title}
+                    <span className="text-xs">({items.filter(i => i.status === col.id && selectedDisciplines.has(i.disciplineName)).length})</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Disciplinas */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-foreground">Disciplinas</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedDisciplines(new Set(allDisciplines))}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Todas
+                </button>
+                <button
+                  onClick={() => setSelectedDisciplines(new Set())}
+                  className="text-xs text-muted-foreground hover:underline"
+                >
+                  Nenhuma
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {allDisciplines.map(name => {
+                const active = selectedDisciplines.has(name)
+                const count = items.filter(i => i.disciplineName === name && selectedStages.has(i.status)).length
+                return (
+                  <button
+                    key={name}
+                    onClick={() => toggleDiscipline(name)}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      active
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {name} ({count})
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Preview resumo */}
+          <div className="rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">
+              O relatório incluirá <strong className="text-foreground">{exportableItems.length}</strong> unidade(s)
+              de <strong className="text-foreground">{grouped.size}</strong> disciplina(s),
+              agrupadas por disciplina com a etapa de cada unidade.
+            </p>
+          </div>
+        </CardContent>
+        <div className="flex gap-2 p-4 border-t border-border flex-shrink-0">
+          <Button variant="outline" className="flex-1" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={handleExport}
+            disabled={exportableItems.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar ({exportableItems.length})
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 interface AddUnitsModalProps {
   discipline: Discipline
   existingItems: KanbanItem[]
@@ -483,86 +713,7 @@ export default function KanbanPage() {
 
   const currentDiscipline = disciplines.find(d => d.id === selectedDiscipline)
 
-  const exportPDF = useCallback(() => {
-    const columnColors: Record<KanbanStatus, string> = {
-      production: '#f59e0b',
-      layout: '#3b82f6',
-      printing: '#8b5cf6',
-      completed: '#22c55e'
-    }
-
-    const disciplineLabel = selectedDiscipline === 'all'
-      ? 'Todas as disciplinas'
-      : currentDiscipline?.name || ''
-
-    const bimesterLabel = selectedBimester === 'all'
-      ? 'Todos os bimestres'
-      : selectedBimester
-
-    let html = `
-      <!DOCTYPE html>
-      <html><head><meta charset="utf-8">
-      <title>Relatório Kanban - ${disciplineLabel}</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; color: #1a1a1a; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
-        .column { margin-bottom: 24px; page-break-inside: avoid; }
-        .column-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-        .column-header .dot { width: 10px; height: 10px; border-radius: 50%; }
-        .column-header .count { margin-left: auto; font-size: 12px; font-weight: 400; color: #666; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px; }
-        th { text-align: left; padding: 6px 10px; background: #f5f5f5; border: 1px solid #e0e0e0; font-weight: 600; }
-        td { padding: 6px 10px; border: 1px solid #e0e0e0; }
-        tr:nth-child(even) td { background: #fafafa; }
-        .footer { margin-top: 32px; font-size: 11px; color: #999; border-top: 1px solid #e0e0e0; padding-top: 8px; }
-        @media print { body { padding: 16px; } }
-      </style>
-      </head><body>
-      <h1>Relatório Kanban — Produção de Conteúdo</h1>
-      <p class="subtitle">${disciplineLabel} · ${bimesterLabel} · Gerado em ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-    `
-
-    for (const col of COLUMNS) {
-      const items = filteredItems.filter(i => i.status === col.id)
-      const color = columnColors[col.id]
-      html += `
-        <div class="column">
-          <div class="column-header" style="background: ${color}15; border-left: 4px solid ${color};">
-            <span class="dot" style="background: ${color};"></span>
-            ${col.title}
-            <span class="count">${items.length} unidade(s)</span>
-          </div>
-      `
-      if (items.length > 0) {
-        html += `<table><thead><tr><th>Disciplina</th><th>Ano</th><th>Bimestre</th><th>Unidade</th><th>Capítulos</th>${col.id === 'printing' ? '<th>Aprovação</th>' : ''}</tr></thead><tbody>`
-        for (const item of items) {
-          html += `<tr>
-            <td>${item.disciplineName}</td>
-            <td>${item.yearName}</td>
-            <td>${item.bimesterName}</td>
-            <td>${getSequentialUnitName(item.bimesterName, item.unitName)}</td>
-            <td>${item.chapters?.length || 0}</td>
-            ${col.id === 'printing' ? `<td>${item.printApproved ? '✅ Aprovado' : '⏳ Aguardando'}</td>` : ''}
-          </tr>`
-        }
-        html += `</tbody></table>`
-      } else {
-        html += `<p style="font-size:12px;color:#999;padding:8px 12px;">Nenhuma unidade nesta etapa.</p>`
-      }
-      html += `</div>`
-    }
-
-    html += `<div class="footer">Colégio Eleve — Sistema de Produção de Conteúdo</div></body></html>`
-
-    const printWindow = window.open('', '_blank')
-    if (printWindow) {
-      printWindow.document.write(html)
-      printWindow.document.close()
-      printWindow.onload = () => printWindow.print()
-    }
-  }, [filteredItems, selectedDiscipline, selectedBimester, currentDiscipline])
+  const [showExportModal, setShowExportModal] = useState(false)
 
   if (loading) {
     return (
@@ -719,7 +870,7 @@ export default function KanbanPage() {
 
         <div className="flex items-center gap-2">
           <Button
-            onClick={exportPDF}
+            onClick={() => setShowExportModal(true)}
             disabled={filteredItems.length === 0}
             size="sm"
             variant="outline"
@@ -817,6 +968,13 @@ export default function KanbanPage() {
             ))}
           </div>
         </>
+      )}
+
+      {showExportModal && (
+        <ExportPDFModal
+          items={filteredItems}
+          onClose={() => setShowExportModal(false)}
+        />
       )}
 
       {showAddModal && currentDiscipline && (
