@@ -328,19 +328,20 @@ function ExportPDFModal({ items, onClose }: ExportPDFModalProps) {
           <span class="count">${discItems.length} unidade(s)</span>
         </div>
         <table><thead><tr>
-          <th>Ano</th><th>Bimestre</th><th>Unidade</th><th>Etapa</th>
+          <th>Ano</th><th>Bimestre</th><th>Unidade</th><th>Etapa</th><th style="text-align:center;">Status</th>
         </tr></thead><tbody>`
 
       for (const item of discItems) {
         const c = COLUMN_COLORS[item.status]
-        const approvalNote = item.status === 'printing'
-          ? ` — ${item.printApproved ? '✅ Aprovado' : '⏳ Aguardando'}`
+        const statusEmoji = item.status === 'printing'
+          ? (item.printApproved ? '✅' : '⏳')
           : ''
         html += `<tr>
           <td>${item.yearName}</td>
           <td>${item.bimesterName}</td>
           <td>${getSequentialUnitName(item.bimesterName, item.unitName)}</td>
-          <td><span class="badge" style="background:${c.hex};">${c.label}</span>${approvalNote}</td>
+          <td><span class="badge" style="background:${c.hex};">${c.label}</span></td>
+          <td style="text-align:center;font-size:16px;">${statusEmoji}</td>
         </tr>`
       }
       html += `</tbody></table></div>`
