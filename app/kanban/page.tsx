@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useDisciplines, useKanbanItems, useCalendarItems } from '@/hooks/use-production-data'
 import { Discipline, KanbanItem, KanbanStatus } from '@/lib/types'
 import { getSequentialUnitName } from '@/lib/utils'
-import { FileText, Layers, Printer, CheckCircle2, GripVertical, X, Plus, ChevronDown, ChevronRight, BookOpen, ChevronLeft, Filter, Loader2, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { FileText, Layers, Printer, CheckCircle2, GripVertical, X, Plus, ChevronDown, ChevronRight, BookOpen, ChevronLeft, Filter, Loader2, ShieldCheck, ShieldAlert, Download } from 'lucide-react'
 import { UserIdentifier } from '@/components/user-identifier'
 
 const COLUMNS: { id: KanbanStatus; title: string; icon: React.ElementType; color: string; borderColor: string }[] = [
@@ -483,6 +483,87 @@ export default function KanbanPage() {
 
   const currentDiscipline = disciplines.find(d => d.id === selectedDiscipline)
 
+  const exportPDF = useCallback(() => {
+    const columnColors: Record<KanbanStatus, string> = {
+      production: '#f59e0b',
+      layout: '#3b82f6',
+      printing: '#8b5cf6',
+      completed: '#22c55e'
+    }
+
+    const disciplineLabel = selectedDiscipline === 'all'
+      ? 'Todas as disciplinas'
+      : currentDiscipline?.name || ''
+
+    const bimesterLabel = selectedBimester === 'all'
+      ? 'Todos os bimestres'
+      : selectedBimester
+
+    let html = `
+      <!DOCTYPE html>
+      <html><head><meta charset="utf-8">
+      <title>Relatório Kanban - ${disciplineLabel}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 32px; color: #1a1a1a; }
+        h1 { font-size: 20px; margin-bottom: 4px; }
+        .subtitle { font-size: 13px; color: #666; margin-bottom: 24px; }
+        .column { margin-bottom: 24px; page-break-inside: avoid; }
+        .column-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        .column-header .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .column-header .count { margin-left: auto; font-size: 12px; font-weight: 400; color: #666; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 12px; }
+        th { text-align: left; padding: 6px 10px; background: #f5f5f5; border: 1px solid #e0e0e0; font-weight: 600; }
+        td { padding: 6px 10px; border: 1px solid #e0e0e0; }
+        tr:nth-child(even) td { background: #fafafa; }
+        .footer { margin-top: 32px; font-size: 11px; color: #999; border-top: 1px solid #e0e0e0; padding-top: 8px; }
+        @media print { body { padding: 16px; } }
+      </style>
+      </head><body>
+      <h1>Relatório Kanban — Produção de Conteúdo</h1>
+      <p class="subtitle">${disciplineLabel} · ${bimesterLabel} · Gerado em ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+    `
+
+    for (const col of COLUMNS) {
+      const items = filteredItems.filter(i => i.status === col.id)
+      const color = columnColors[col.id]
+      html += `
+        <div class="column">
+          <div class="column-header" style="background: ${color}15; border-left: 4px solid ${color};">
+            <span class="dot" style="background: ${color};"></span>
+            ${col.title}
+            <span class="count">${items.length} unidade(s)</span>
+          </div>
+      `
+      if (items.length > 0) {
+        html += `<table><thead><tr><th>Disciplina</th><th>Ano</th><th>Bimestre</th><th>Unidade</th><th>Capítulos</th>${col.id === 'printing' ? '<th>Aprovação</th>' : ''}</tr></thead><tbody>`
+        for (const item of items) {
+          html += `<tr>
+            <td>${item.disciplineName}</td>
+            <td>${item.yearName}</td>
+            <td>${item.bimesterName}</td>
+            <td>${getSequentialUnitName(item.bimesterName, item.unitName)}</td>
+            <td>${item.chapters?.length || 0}</td>
+            ${col.id === 'printing' ? `<td>${item.printApproved ? '✅ Aprovado' : '⏳ Aguardando'}</td>` : ''}
+          </tr>`
+        }
+        html += `</tbody></table>`
+      } else {
+        html += `<p style="font-size:12px;color:#999;padding:8px 12px;">Nenhuma unidade nesta etapa.</p>`
+      }
+      html += `</div>`
+    }
+
+    html += `<div class="footer">Colégio Eleve — Sistema de Produção de Conteúdo</div></body></html>`
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(html)
+      printWindow.document.close()
+      printWindow.onload = () => printWindow.print()
+    }
+  }, [filteredItems, selectedDiscipline, selectedBimester, currentDiscipline])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -636,15 +717,28 @@ export default function KanbanPage() {
           ))}
         </div>
 
-        <Button
-          onClick={() => setShowAddModal(true)}
-          disabled={disciplines.length === 0 || selectedDiscipline === 'all'}
-          size="sm"
-        >
-          <Plus className="h-4 w-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Adicionar Unidades</span>
-          <span className="sm:hidden">Adicionar</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={exportPDF}
+            disabled={filteredItems.length === 0}
+            size="sm"
+            variant="outline"
+          >
+            <Download className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="sm:hidden">PDF</span>
+          </Button>
+
+          <Button
+            onClick={() => setShowAddModal(true)}
+            disabled={disciplines.length === 0 || selectedDiscipline === 'all'}
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Adicionar Unidades</span>
+            <span className="sm:hidden">Adicionar</span>
+          </Button>
+        </div>
       </div>
 
       {selectedDiscipline === 'all' && disciplines.length > 0 && (
